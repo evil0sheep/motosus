@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Always use ES imports
+Please use `npm test` to verify changes
+
