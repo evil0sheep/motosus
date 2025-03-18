@@ -3,33 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motorcycle Frame Geometry</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <title>Motorcycle Suspension Simulator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            font-family: Arial, sans-serif;
+        }
+        #canvas-container {
+            flex: 1;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin-left: 300px;
+        }
+        #controls {
+            width: 300px;
+            height: 100vh;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+        .slider-container {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        .value-display {
+            font-family: monospace;
+            color: #666;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
 </head>
 <body>
-    <div class="controls">
-        <h2>Frame Geometry Controls (mm)</h2>
-        <div class="slider-container">
-            <label for="swingArmPivotToHeadTubeTopCenter">Swingarm Pivot to Head Tube Top: <span id="swingArmPivotToHeadTubeTopCenterValue">800</span> mm</label>
-            <input type="range" id="swingArmPivotToHeadTubeTopCenter" min="600" max="1000" value="800">
-        </div>
-        <div class="slider-container">
-            <label for="swingArmPivotToHeadTubeBottomCenter">Swingarm Pivot to Head Tube Bottom: <span id="swingArmPivotToHeadTubeBottomCenterValue">800</span> mm</label>
-            <input type="range" id="swingArmPivotToHeadTubeBottomCenter" min="600" max="1000" value="800">
-        </div>
-        <div class="slider-container">
-            <label for="headTubeLength">Head Tube Length: <span id="headTubeLengthValue">200</span> mm</label>
-            <input type="range" id="headTubeLength" min="150" max="300" value="200">
-        </div>
-        <div class="control-group">
-            <label for="frontForkLength">Front Fork Length (mm)</label>
-            <input type="range" id="frontForkLength" min="300" max="800" value="500">
-            <span id="frontForkLengthValue">500</span>
-        </div>
-        <button id="resetButton" class="reset-button">Reset Simulation</button>
-    </div>
     <div id="canvas-container"></div>
-    <script type="module" src="script.js"></script>
+    <div id="controls">
+        <h2>Frame Parameters</h2>
+        <div class="slider-container">
+            <label for="swingArmPivotToHeadTubeTopCenter">Swing Arm Pivot to Head Tube Top Center (mm)</label>
+            <input type="range" id="swingArmPivotToHeadTubeTopCenter" min="400" max="1200" value="800">
+            <span id="swingArmPivotToHeadTubeTopCenterValue" class="value-display">800</span>
+        </div>
+        <div class="slider-container">
+            <label for="swingArmPivotToHeadTubeBottomCenter">Swing Arm Pivot to Head Tube Bottom Center (mm)</label>
+            <input type="range" id="swingArmPivotToHeadTubeBottomCenter" min="400" max="1200" value="800">
+            <span id="swingArmPivotToHeadTubeBottomCenterValue" class="value-display">800</span>
+        </div>
+        <div class="slider-container">
+            <label for="headTubeLength">Head Tube Length (mm)</label>
+            <input type="range" id="headTubeLength" min="100" max="300" value="200">
+            <span id="headTubeLengthValue" class="value-display">200</span>
+        </div>
+        <div class="slider-container">
+            <label for="frontForkLength">Front Fork Length (mm)</label>
+            <input type="range" id="frontForkLength" min="300" max="700" value="500">
+            <span id="frontForkLengthValue" class="value-display">500</span>
+        </div>
+        <button id="resetButton">Reset Simulation</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script type="module" src="js/script.js"></script>
 </body>
 </html> 
