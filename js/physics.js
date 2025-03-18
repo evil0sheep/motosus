@@ -49,15 +49,15 @@ function initPhysics(Matter, canvasContainer, canvasSize) {
 }
 
 // Function to create all bodies for the simulation
-function createBodies(geometry, frameParams, Matter) {
+function createBodies(geometry, params, Matter) {
     const bodies = {};
 
     // Create ground
     bodies['ground'] = Matter.Bodies.rectangle(
         geometry.groundGeometry.x,
         geometry.groundGeometry.y,
-        geometry.groundGeometry.width,
-        geometry.groundGeometry.height,
+        params.simulation.groundWidth.defaultValue,
+        params.simulation.groundHeight.defaultValue,
         {
             isStatic: true,
             render: {
@@ -73,7 +73,7 @@ function createBodies(geometry, frameParams, Matter) {
     // Create frame as a rigid body
     bodies['frame'] = Matter.Bodies.fromVertices(
         0,
-        0,
+        0, 
         [geometry.frameVertices],
         {
             isStatic: false,
@@ -88,7 +88,7 @@ function createBodies(geometry, frameParams, Matter) {
     // Create fork tube as a rigid body
     bodies['fork'] = Matter.Bodies.fromVertices(
         0,
-        0,
+        0, 
         [geometry.forkVertices],
         {
             isStatic: false,
@@ -114,7 +114,7 @@ function createBodies(geometry, frameParams, Matter) {
                 bodyB: bodies.fork,
                 pointB: {
                     x: 0,
-                    y: -frameParams.frontForkLength/2
+                    y: -params.frame.frontForkLength.defaultValue/2
                 },
                 stiffness: 1,
                 length: 0
@@ -129,12 +129,17 @@ function createBodies(geometry, frameParams, Matter) {
                 bodyB: bodies.fork,
                 pointB: {
                     x: 0,
-                    y: frameParams.headTubeLength - frameParams.frontForkLength/2
+                    y: params.frame.headTubeLength.defaultValue - params.frame.frontForkLength.defaultValue/2
                 },
                 stiffness: 1,
                 length: 0
             })
         ]
+    });
+
+    Matter.Composite.translate(bodies.motorcycle, {
+        x: 0,
+        y: -1000
     });
 
     // Create origin marker (small red circle)
@@ -151,14 +156,20 @@ function createBodies(geometry, frameParams, Matter) {
         }
     });
 
+    // Create a scene composite containing everything except the origin marker
+    bodies['scene'] = Matter.Composite.create({
+        bodies: [bodies.ground],
+        composites: [bodies.motorcycle]
+    });
+
     return bodies;
 }
 
 // Function to update motorcycle geometry without recreating bodies
-function updateBodies(frameParams, worldBodies, Matter, canvasSize) {
+function updateBodies(params, worldBodies, Matter) {
     if (!worldBodies.motorcycle) return;  // Don't update if motorcycle doesn't exist yet
 
-    const geometry = generateGeometry(frameParams, canvasSize);
+    const geometry = generateGeometry(params.frame, params.simulation);
 
     // Update frame vertices
     const frameBody = worldBodies.motorcycle.bodies[0];
@@ -176,16 +187,16 @@ function updateBodies(frameParams, worldBodies, Matter, canvasSize) {
     topConstraint.pointA.x = geometry.headTubeTop.x - geometry.frameCentroid.x;
     topConstraint.pointA.y = geometry.headTubeTop.y - geometry.frameCentroid.y;
     topConstraint.pointB.x = 0;
-    topConstraint.pointB.y = -frameParams.frontForkLength/2;
+    topConstraint.pointB.y = -params.frame.frontForkLength.defaultValue/2;
 
     bottomConstraint.pointA.x = geometry.headTubeBottom.x - geometry.frameCentroid.x;
     bottomConstraint.pointA.y = geometry.headTubeBottom.y - geometry.frameCentroid.y;
     bottomConstraint.pointB.x = 0;
-    bottomConstraint.pointB.y = frameParams.headTubeLength - frameParams.frontForkLength/2;
+    bottomConstraint.pointB.y = params.frame.headTubeLength.defaultValue - params.frame.frontForkLength.defaultValue/2;
 }
 
 // Function to create the world and motorcycle
-function createWorld(frameParams, world, Matter, render, canvasSize, worldBodies) {
+function createWorld(params, world, Matter, render, worldBodies) {
     // Clear existing bodies and constraints
     if (worldBodies.motorcycle) {
         Matter.World.remove(world, worldBodies.motorcycle);
@@ -197,53 +208,26 @@ function createWorld(frameParams, world, Matter, render, canvasSize, worldBodies
         delete worldBodies[key];
     });
 
-    const geometry = generateGeometry(frameParams, canvasSize);
-    const newBodies = createBodies(geometry, frameParams, Matter);
+    const geometry = generateGeometry(params.frame, params.simulation);
+    const newBodies = createBodies(geometry, params, Matter);
     
     // Copy all properties from newBodies to worldBodies
     Object.assign(worldBodies, newBodies);
 
-    // Add all bodies to the world
+    // Add scene and origin marker to the world
+    Matter.World.add(world, worldBodies.scene);
     Matter.World.add(world, worldBodies.originMarker);
-    Matter.World.add(world, worldBodies.motorcycle);
-    Matter.World.add(world, worldBodies.ground);
     
-    // Get the bounds of the motorcycle
-    const motorcycleBounds = Matter.Composite.bounds(worldBodies.motorcycle);
-    
-    // Calculate ground bounds from its known position and dimensions
-    const groundBounds = {
-        min: {
-            x: -canvasSize.width,
-            y: canvasSize.height - 120
-        },
-        max: {
-            x: canvasSize.width,
-            y: canvasSize.height
-        }
-    };
-    
-    // Calculate combined bounds
-    const bounds = {
-        min: {
-            x: Math.min(motorcycleBounds.min.x, groundBounds.min.x),
-            y: Math.min(motorcycleBounds.min.y, groundBounds.min.y)
-        },
-        max: {
-            x: Math.max(motorcycleBounds.max.x, groundBounds.max.x),
-            y: Math.max(motorcycleBounds.max.y, groundBounds.max.y)
-        }
-    };
-
     const padding = 50;
+    const sceneBounds = Matter.Composite.bounds(worldBodies.scene);
     const paddedBounds = {
         min: {
-            x: bounds.min.x - padding,
-            y: bounds.min.y - padding,
+            x: sceneBounds.min.x - padding,
+            y: sceneBounds.min.y - padding,
         },
         max: {
-            x: bounds.max.x + padding,
-            y: bounds.max.y + padding,
+            x: sceneBounds.max.x + padding,
+            y: sceneBounds.max.y + padding,
         },
     };
 

@@ -2,7 +2,7 @@
 
 // Import physics functions and configuration
 import { initPhysics, createWorld, updateBodies } from './physics.js';
-import { frameParams } from './config.js';
+import { params } from './config.js';
 
 // Constants
 const CANVAS_MARGIN = 50; // Margin from edges
@@ -18,20 +18,39 @@ let worldBodies = {};
 const { world, render } = initPhysics(Matter, document.getElementById('canvas-container'), canvasSize);
 
 // Create default frame parameters object
-const getDefaultFrameParams = () => {
-    const params = {};
-    for (const [key, config] of Object.entries(frameParams)) {
-        params[key] = config.defaultValue;
-    }
-    return params;
+const getDefaultParams = () => {
+    return {
+        frame: {
+            swingArmPivotToHeadTubeTopCenter: {
+                defaultValue: params.frame.swingArmPivotToHeadTubeTopCenter.defaultValue
+            },
+            swingArmPivotToHeadTubeBottomCenter: {
+                defaultValue: params.frame.swingArmPivotToHeadTubeBottomCenter.defaultValue
+            },
+            headTubeLength: {
+                defaultValue: params.frame.headTubeLength.defaultValue
+            },
+            frontForkLength: {
+                defaultValue: params.frame.frontForkLength.defaultValue
+            }
+        },
+        simulation: {
+            groundWidth: {
+                defaultValue: params.simulation.groundWidth.defaultValue
+            },
+            groundHeight: {
+                defaultValue: params.simulation.groundHeight.defaultValue
+            }
+        }
+    };
 };
 
 // Initialize the world with default values
-createWorld(getDefaultFrameParams(), world, Matter, render, canvasSize, worldBodies);
+createWorld(getDefaultParams(), world, Matter, render, worldBodies);
 
 // Create UI controls
 const slidersContainer = document.getElementById('sliders-container');
-Object.entries(frameParams).forEach(([key, config]) => {
+Object.entries(params.frame).forEach(([key, config]) => {
     const container = document.createElement('div');
     container.className = 'slider-container';
     
@@ -65,28 +84,27 @@ sliders.forEach(slider => {
         const value = e.target.value;
         document.getElementById(`${e.target.id}Value`).textContent = value;
         
-        const currentFrameParams = {};
-        Object.keys(frameParams).forEach(key => {
-            currentFrameParams[key] = parseInt(document.getElementById(key).value);
+        const currentParams = getDefaultParams();
+        Object.keys(params.frame).forEach(key => {
+            currentParams.frame[key].defaultValue = parseInt(document.getElementById(key).value);
         });
         
-        updateBodies(currentFrameParams, worldBodies, Matter, canvasSize);
+        updateBodies(currentParams, worldBodies, Matter, canvasSize);
     });
 });
 
 // Handle reset button click
 document.getElementById('resetButton').addEventListener('click', () => {
-    const currentFrameParams = {};
-    Object.keys(frameParams).forEach(key => {
-        currentFrameParams[key] = parseInt(document.getElementById(key).value);
+    const currentParams = getDefaultParams();
+    Object.keys(params.frame).forEach(key => {
+        currentParams.frame[key].defaultValue = parseInt(document.getElementById(key).value);
     });
     
     createWorld(
-        currentFrameParams,
+        currentParams,
         world,
         Matter,
         render,
-        canvasSize,
         worldBodies
     );
 }); 

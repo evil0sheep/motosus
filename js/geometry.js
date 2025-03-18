@@ -23,11 +23,11 @@ export function triangleCentroid(vertices) {
 }
 
 // Function to generate motorcycle geometry
-export function generateGeometry(frameParams, canvasSize) {
+export function generateGeometry(frameParams, simulationParams) {
     const frameVertices = triangleVertices(
-        frameParams.headTubeLength,
-        frameParams.swingArmPivotToHeadTubeTopCenter,
-        frameParams.swingArmPivotToHeadTubeBottomCenter
+        frameParams.headTubeLength.defaultValue,
+        frameParams.swingArmPivotToHeadTubeTopCenter.defaultValue,
+        frameParams.swingArmPivotToHeadTubeBottomCenter.defaultValue
     );
     const swingArmPivot = frameVertices[0];
     const headTubeBottom = frameVertices[1];
@@ -36,18 +36,18 @@ export function generateGeometry(frameParams, canvasSize) {
 
     const forkWidth = 20;
     const forkVertices = [
-        { x: -forkWidth/2, y: -frameParams.frontForkLength },
-        { x: forkWidth/2, y: -frameParams.frontForkLength },
+        { x: -forkWidth/2, y: -frameParams.frontForkLength.defaultValue },
+        { x: forkWidth/2, y: -frameParams.frontForkLength.defaultValue },
         { x: forkWidth/2, y: 0 },
         { x: -forkWidth/2, y: 0 }
     ];
 
-    // Create ground geometry
+    // Create ground geometry using simulation parameters
     const groundGeometry = {
         x: 0,
-        y: canvasSize.height - 60,
-        width: canvasSize.width * 2,
-        height: 120
+        y: 0, // Ground is now at origin
+        width: simulationParams.groundWidth.defaultValue,
+        height: simulationParams.groundHeight.defaultValue
     };
 
     return {

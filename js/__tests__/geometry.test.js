@@ -34,17 +34,30 @@ describe('triangle geometry', () => {
 describe('generateGeometry', () => {
     test('should generate valid geometry for reasonable input parameters', () => {
         const frameParams = {
-            headTubeLength: 100,
-            swingArmPivotToHeadTubeTopCenter: 500,
-            swingArmPivotToHeadTubeBottomCenter: 500,
-            frontForkLength: 300
-        };
-        const canvasSize = {
-            width: 800,
-            height: 600
+            headTubeLength: {
+                defaultValue: 100,
+            },
+            swingArmPivotToHeadTubeTopCenter: {
+                defaultValue: 500,
+            },
+            swingArmPivotToHeadTubeBottomCenter: {
+                defaultValue: 500,
+            },
+            frontForkLength: {
+                defaultValue: 300,
+            }
         };
 
-        const geometry = generateGeometry(frameParams, canvasSize);
+        const simulationParams = {
+            groundWidth: {
+                defaultValue: 2000,
+            },
+            groundHeight: {
+                defaultValue: 100,
+            }
+        };
+
+        const geometry = generateGeometry(frameParams, simulationParams);
 
         // Check that all expected properties exist
         expect(geometry).toHaveProperty('frameVertices');

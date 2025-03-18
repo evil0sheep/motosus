@@ -1,6 +1,12 @@
 import { initPhysics, createWorld, updateBodies, CATEGORIES, MASKS } from '../physics.js';
+import { params } from '../config.js';
 import Matter from 'matter-js';
 import { createCanvas } from 'canvas';
+
+// Helper function to clone params to avoid modifying the original
+const cloneParams = () => {
+    return JSON.parse(JSON.stringify(params));
+};
 
 describe('physics.js', () => {
     let canvasContainer;
@@ -86,14 +92,7 @@ describe('physics.js', () => {
         });
 
         it('should create all required bodies', () => {
-            const frameParams = {
-                swingArmPivotToHeadTubeTopCenter: 800,
-                swingArmPivotToHeadTubeBottomCenter: 800,
-                headTubeLength: 200,
-                frontForkLength: 500
-            };
-
-            createWorld(frameParams, world, Matter, render, canvasSize, worldBodies);
+            createWorld(cloneParams(), world, Matter, render, worldBodies);
 
             // Check that all required bodies exist
             expect(worldBodies.ground).toBeDefined();
@@ -104,14 +103,7 @@ describe('physics.js', () => {
         });
 
         it('should set correct collision filters', () => {
-            const frameParams = {
-                swingArmPivotToHeadTubeTopCenter: 800,
-                swingArmPivotToHeadTubeBottomCenter: 800,
-                headTubeLength: 200,
-                frontForkLength: 500
-            };
-
-            createWorld(frameParams, world, Matter, render, canvasSize, worldBodies);
+            createWorld(cloneParams(), world, Matter, render, worldBodies);
 
             // Check ground collision filter
             expect(worldBodies.ground.collisionFilter.category).toBe(CATEGORIES.GROUND);
@@ -127,14 +119,7 @@ describe('physics.js', () => {
         });
 
         it('should create motorcycle composite with correct constraints', () => {
-            const frameParams = {
-                swingArmPivotToHeadTubeTopCenter: 800,
-                swingArmPivotToHeadTubeBottomCenter: 800,
-                headTubeLength: 200,
-                frontForkLength: 500
-            };
-
-            createWorld(frameParams, world, Matter, render, canvasSize, worldBodies);
+            createWorld(cloneParams(), world, Matter, render, worldBodies);
 
             const motorcycle = worldBodies.motorcycle;
             expect(motorcycle.bodies).toHaveLength(2); // frame and fork
@@ -156,13 +141,7 @@ describe('physics.js', () => {
             worldBodies = {};
 
             // Create initial world
-            const frameParams = {
-                swingArmPivotToHeadTubeTopCenter: 800,
-                swingArmPivotToHeadTubeBottomCenter: 800,
-                headTubeLength: 200,
-                frontForkLength: 500
-            };
-            createWorld(frameParams, world, Matter, render, canvasSize, worldBodies);
+            createWorld(cloneParams(), world, Matter, render, worldBodies);
         });
 
         afterEach(() => {
@@ -177,17 +156,17 @@ describe('physics.js', () => {
         });
 
         it('should update motorcycle geometry when frame parameters change', () => {
-            const newFrameParams = {
-                swingArmPivotToHeadTubeTopCenter: 900,
-                swingArmPivotToHeadTubeBottomCenter: 900,
-                headTubeLength: 250,
-                frontForkLength: 550
-            };
+            const newParams = cloneParams();
+            // Modify frame parameters
+            newParams.frame.swingArmPivotToHeadTubeTopCenter.defaultValue = 900;
+            newParams.frame.swingArmPivotToHeadTubeBottomCenter.defaultValue = 900;
+            newParams.frame.headTubeLength.defaultValue = 250;
+            newParams.frame.frontForkLength.defaultValue = 550;
 
             const originalFrameVertices = [...worldBodies.motorcycle.bodies[0].vertices];
             const originalForkVertices = [...worldBodies.motorcycle.bodies[1].vertices];
 
-            updateBodies(newFrameParams, worldBodies, Matter, canvasSize);
+            updateBodies(newParams, worldBodies, Matter);
 
             const updatedFrameVertices = worldBodies.motorcycle.bodies[0].vertices;
             const updatedForkVertices = worldBodies.motorcycle.bodies[1].vertices;
@@ -198,26 +177,17 @@ describe('physics.js', () => {
         });
 
         it('should update constraint attachment points', () => {
-            // Create initial world with default frame parameters
-            const frameParams = {
-                headTubeLength: 100,
-                frontForkLength: 200
-            };
-            const canvasSize = { width: 800, height: 600 };
-            createWorld(frameParams, world, Matter, render, canvasSize, worldBodies);
+            const newParams = cloneParams();
+            // Modify frame parameters
+            newParams.frame.headTubeLength.defaultValue = 150;
+            newParams.frame.frontForkLength.defaultValue = 250;
 
             // Get initial constraint points
             const topConstraint = worldBodies.motorcycle.constraints[0];
             const bottomConstraint = worldBodies.motorcycle.constraints[1];
 
-            // Update frame parameters
-            const newFrameParams = {
-                headTubeLength: 150, // Increased head tube length
-                frontForkLength: 250 // Increased fork length
-            };
-
             // Update bodies with new parameters
-            updateBodies(newFrameParams, worldBodies, Matter, canvasSize);
+            updateBodies(newParams, worldBodies, Matter);
 
             // Get updated constraint points
             const updatedTopConstraint = worldBodies.motorcycle.constraints[0];
@@ -225,11 +195,11 @@ describe('physics.js', () => {
 
             // Verify top constraint points
             expect(updatedTopConstraint.pointB.x).toBe(0);
-            expect(updatedTopConstraint.pointB.y).toBe(-newFrameParams.frontForkLength/2);
+            expect(updatedTopConstraint.pointB.y).toBe(-newParams.frame.frontForkLength.defaultValue/2);
 
             // Verify bottom constraint points
             expect(updatedBottomConstraint.pointB.x).toBe(0);
-            expect(updatedBottomConstraint.pointB.y).toBe(newFrameParams.headTubeLength - newFrameParams.frontForkLength/2);
+            expect(updatedBottomConstraint.pointB.y).toBe(newParams.frame.headTubeLength.defaultValue - newParams.frame.frontForkLength.defaultValue/2);
         });
     });
 }); 
