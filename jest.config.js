@@ -1,10 +1,9 @@
 export default {
-    transform: {
-        '^.+\\.js$': 'babel-jest',
+    testEnvironment: 'jsdom',
+    transform: {},
+    moduleNameMapper: {
+        '^(\\.{1,2}/.*)\\.js$': '$1',
     },
-    testEnvironment: 'node',
-    moduleFileExtensions: ['js'],
-    transformIgnorePatterns: [
-        'node_modules/(?!(matter-js)/)'
-    ]
+    testMatch: ['**/*.test.js'],
+    type: 'module'
 }; 

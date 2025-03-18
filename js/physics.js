@@ -12,6 +12,42 @@ const MASKS = {
     GROUND: 0x0001  // Ground collides with frame
 };
 
+// Function to initialize Matter.js physics engine and renderer
+function initPhysics(Matter, canvasContainer, canvasSize) {
+    // Initialize Matter.js engine and world
+    const engine = Matter.Engine.create();
+    engine.world.gravity.y = 1; // Enable gravity
+    const world = engine.world;
+
+    // Initialize renderer
+    const render = Matter.Render.create({
+        element: canvasContainer,
+        engine: engine,
+        options: {
+            width: canvasSize.width,
+            height: canvasSize.height,
+            wireframes: true,
+            pixelRatio: 1,
+        }
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => { 
+        render.bounds.max.x = canvasSize.width;
+        render.bounds.max.y = canvasSize.height;
+        render.options.width = canvasSize.width;
+        render.options.height = canvasSize.height;
+        render.canvas.width = canvasSize.width;
+        render.canvas.height = canvasSize.height;
+    });
+
+    // Start the simulation
+    Matter.Runner.run(engine);
+    Matter.Render.run(render);
+
+    return { engine, world, render };
+}
+
 // Function to create all bodies for the simulation
 function createBodies(geometry, frameParams, Matter) {
     const bodies = {};
@@ -214,4 +250,4 @@ function createWorld(frameParams, world, Matter, render, canvasSize, worldBodies
     Matter.Render.lookAt(render, paddedBounds);
 }
 
-export { createWorld, updateBodies, CATEGORIES, MASKS }; 
+export { initPhysics, createWorld, updateBodies, CATEGORIES, MASKS }; 
