@@ -47,28 +47,28 @@ let framePoints = [];
 let frameConstraints = [];
 let bodies = {};
 
-function triangleVertices(a, b, c) {
-    // Triangle inequality theorem: the sum of any two sides must be greater
-    // than the third side.
-    if (!(a + b > c && a + c > b && b + c > a)) {
-      return null; // Invalid triangle
-    }
-  
+function triangleVertices(a, b, c) {  
     // Place vertex C at the origin (0, 0).
     const C = { x: 0, y: 0 };
   
     // Place vertex B at (c, 0).
-    const B = { x: c, y: 0 };
+    const B = { x: -c, y: 0 };
   
     // Use the law of cosines to find the angle at vertex C.
     const cosC = (a * a - b * b - c * c) / (-2 * b * c);
     const angleC = Math.acos(cosC);
   
     // Calculate the coordinates of vertex A using trigonometry.
-    const A = { x: b * Math.cos(angleC), y: b * Math.sin(angleC) };
+    const A = { x: -b * Math.cos(angleC), y: -b * Math.sin(angleC) };
   
-    return [A, B, C];
+    return [C, B, A];
   }
+
+function triangleCentroid(vertices) {
+    const x = (vertices[0].x + vertices[1].x + vertices[2].x) / 3;
+    const y = (vertices[0].y + vertices[1].y + vertices[2].y) / 3;
+    return { x, y };
+}
 
 // Function to create the motorcycle frame
 function createFrame(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBottomCenter, headTubeLength, frontForkLength) {
@@ -80,15 +80,17 @@ function createFrame(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBo
     // Calculate initial positions for the frame points
     const centerX = CANVAS_WIDTH / 2;
     const centerY = CANVAS_HEIGHT / 2;
-    const radius = Math.min(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBottomCenter) * 0.4;
 
 
     const frameVertices = triangleVertices(headTubeLength, swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBottomCenter);
+    const swingArmPivot = frameVertices[0];
+    const headTubeBottom = frameVertices[1];
+    const headTubeTop = frameVertices[2];
 
     // Create frame as a rigid body
     const frameBody = Bodies.fromVertices(
-        centerX,
-        centerY,
+        0,
+        0,
         [frameVertices],
         {
             isStatic: false,
@@ -104,16 +106,24 @@ function createFrame(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBo
     // Calculate fork tube vertices (rectangle)
     const forkWidth = 20; // 20mm wide
     const forkVertices = [
-        { x: -forkWidth/2, y: 0 }, // Center the fork at its connection point
+        { x: -forkWidth/2, y: -frontForkLength }, // Start from top, pointing down
+        { x: forkWidth/2, y: -frontForkLength },
         { x: forkWidth/2, y: 0 },
-        { x: forkWidth/2, y: frontForkLength },
-        { x: -forkWidth/2, y: frontForkLength }
+        { x: -forkWidth/2, y: 0 }
     ];
 
-    // Create fork tube as a rigid body
+    // Calculate head tube angle relative to vertical
+    const headTubeAngle = Math.atan2(
+        headTubeBottom.x - headTubeTop.x,
+        headTubeBottom.y - headTubeTop.y
+    );
+
+
+
+    // Create fork tube as a rigid body - initially at origin
     const forkBody = Bodies.fromVertices(
-        centerX,
-        centerY,
+        0,
+        0,
         [forkVertices],
         {
             isStatic: false,
@@ -125,12 +135,32 @@ function createFrame(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBo
         }
     );
 
-    // Position and rotate the fork
-    Body.setPosition(forkBody, {
-        x: centerX,
-        y: centerY
+
+
+
+    const frameCentroid = triangleCentroid(frameVertices);
+
+    Body.translate(forkBody, {
+        x: 0, 
+        y: frontForkLength/2   // translate down in fork's local space
     });
-    Body.setAngle(forkBody, Math.PI/3); // Match head tube angle
+
+    // First rotate the fork to match head tube angle
+    Body.rotate(forkBody, -headTubeAngle, {x: 0, y: 0});
+
+    // Then position it at the head tube bottom
+    Body.translate(forkBody, {
+        x: headTubeTop.x - frameCentroid.x,
+        y: headTubeTop.y - frameCentroid.y,
+    });
+
+
+
+
+    // Body.setPosition(forkBody, {
+    //     x: 0,
+    //     y: 0,
+    // });
 
     bodies['fork'] = forkBody;
 
@@ -139,6 +169,23 @@ function createFrame(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBo
         bodies: [frameBody, forkBody],
         constraints: [] // No constraints needed
     });
+
+    // Create origin marker (small red circle)
+    const originMarker = Bodies.circle(0, 0, 5, {
+        isStatic: true,
+        render: {
+            fillStyle: '#FF0000',
+            strokeStyle: '#FF0000',
+            lineWidth: 1
+        },
+        collisionFilter: {
+            category: CATEGORIES.FRAME,
+            mask: MASKS.NONE
+        }
+    });
+    
+    // Add the origin marker to the composite
+    Composite.add(motorcycle, originMarker);
 
     // Add the composite to the world
     World.add(world, motorcycle);
@@ -182,7 +229,7 @@ World.add(world, mouseConstraint);
 render.mouse = mouse;
 
 // Start the engine and renderer
-Engine.run(engine);
+Matter.Runner.run(engine)
 Render.run(render);
 
 // Handle slider changes
