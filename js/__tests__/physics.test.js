@@ -1,11 +1,11 @@
 import { initPhysics, createWorld, updateBodies, CATEGORIES, MASKS } from '../physics.js';
-import { params } from '../config.js';
+import { defaultParams } from '../config.js';
 import Matter from 'matter-js';
 import { createCanvas } from 'canvas';
 
 // Helper function to clone params to avoid modifying the original
 const cloneParams = () => {
-    return JSON.parse(JSON.stringify(params));
+    return JSON.parse(JSON.stringify(defaultParams));
 };
 
 describe('physics.js', () => {
@@ -158,10 +158,10 @@ describe('physics.js', () => {
         it('should update motorcycle geometry when frame parameters change', () => {
             const newParams = cloneParams();
             // Modify frame parameters
-            newParams.frame.swingArmPivotToHeadTubeTopCenter.defaultValue = 900;
-            newParams.frame.swingArmPivotToHeadTubeBottomCenter.defaultValue = 900;
-            newParams.frame.headTubeLength.defaultValue = 250;
-            newParams.frame.frontForkLength.defaultValue = 550;
+            newParams.frame.swingArmPivotToHeadTubeTopCenter.value = 900;
+            newParams.frame.swingArmPivotToHeadTubeBottomCenter.value = 900;
+            newParams.frame.headTubeLength.value = 250;
+            newParams.frame.frontForkLength.value = 550;
 
             const originalFrameVertices = [...worldBodies.motorcycle.bodies[0].vertices];
             const originalForkVertices = [...worldBodies.motorcycle.bodies[1].vertices];
@@ -179,8 +179,8 @@ describe('physics.js', () => {
         it('should update constraint attachment points', () => {
             const newParams = cloneParams();
             // Modify frame parameters
-            newParams.frame.headTubeLength.defaultValue = 150;
-            newParams.frame.frontForkLength.defaultValue = 250;
+            newParams.frame.headTubeLength.value = 150;
+            newParams.frame.frontForkLength.value = 250;
 
             // Get initial constraint points
             const topConstraint = worldBodies.motorcycle.constraints[0];
@@ -195,11 +195,11 @@ describe('physics.js', () => {
 
             // Verify top constraint points
             expect(updatedTopConstraint.pointB.x).toBe(0);
-            expect(updatedTopConstraint.pointB.y).toBe(-newParams.frame.frontForkLength.defaultValue/2);
+            expect(updatedTopConstraint.pointB.y).toBe(-newParams.frame.frontForkLength.value/2);
 
             // Verify bottom constraint points
             expect(updatedBottomConstraint.pointB.x).toBe(0);
-            expect(updatedBottomConstraint.pointB.y).toBe(newParams.frame.headTubeLength.defaultValue - newParams.frame.frontForkLength.defaultValue/2);
+            expect(updatedBottomConstraint.pointB.y).toBe(newParams.frame.headTubeLength.value - newParams.frame.frontForkLength.value/2);
         });
     });
 }); 

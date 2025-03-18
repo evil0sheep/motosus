@@ -2,7 +2,7 @@
 
 // Import physics functions and configuration
 import { initPhysics, createWorld, updateBodies } from './physics.js';
-import { params } from './config.js';
+import { defaultParams } from './config.js';
 
 // Constants
 const CANVAS_MARGIN = 50; // Margin from edges
@@ -19,14 +19,14 @@ const { world, render } = initPhysics(Matter, document.getElementById('canvas-co
 
 // Create default frame parameters object
 const getDefaultParams = () => {
-    return params;
+    return defaultParams;
 };
 
 // Get current parameters from UI sliders
 const getCurrentParams = () => {
-    const currentParams = getDefaultParams();
-    Object.keys(params.frame).forEach(key => {
-        currentParams.frame[key].defaultValue = parseInt(document.getElementById(key).value);
+    const currentParams = JSON.parse(JSON.stringify(defaultParams));
+    Object.keys(defaultParams.frame).forEach(key => {
+        currentParams.frame[key].value = parseInt(document.getElementById(key).value);
     });
     return currentParams;
 };
@@ -36,7 +36,7 @@ createWorld(getDefaultParams(), world, Matter, render, worldBodies);
 
 // Create UI controls
 const slidersContainer = document.getElementById('sliders-container');
-Object.entries(params.frame).forEach(([key, config]) => {
+Object.entries(defaultParams.frame).forEach(([key, config]) => {
     const container = document.createElement('div');
     container.className = 'slider-container';
     
@@ -47,14 +47,14 @@ Object.entries(params.frame).forEach(([key, config]) => {
     const slider = document.createElement('input');
     slider.type = 'range';
     slider.id = key;
-    slider.min = Math.round(config.defaultValue * 0.5); // 50% of default
-    slider.max = Math.round(config.defaultValue * 1.5); // 150% of default
-    slider.value = config.defaultValue;
+    slider.min = Math.round(config.value * 0.5); // 50% of default
+    slider.max = Math.round(config.value * 1.5); // 150% of default
+    slider.value = config.value;
     
     const valueDisplay = document.createElement('span');
     valueDisplay.id = `${key}Value`;
     valueDisplay.className = 'value-display';
-    valueDisplay.textContent = config.defaultValue;
+    valueDisplay.textContent = config.value;
     
     container.appendChild(label);
     container.appendChild(slider);
@@ -71,7 +71,14 @@ sliders.forEach(slider => {
         document.getElementById(`${e.target.id}Value`).textContent = value;
         
         const currentParams = getCurrentParams();
-        updateBodies(currentParams, worldBodies, Matter, canvasSize);
+        try {
+            updateBodies(currentParams, worldBodies, Matter, canvasSize);
+        } catch (error) {
+            // Revert the slider to its previous value
+            e.target.value = e.target.defaultValue;
+            document.getElementById(`${e.target.id}Value`).textContent = e.target.defaultValue;
+            alert(error.message);
+        }
     });
 });
 
@@ -79,11 +86,15 @@ sliders.forEach(slider => {
 document.getElementById('resetButton').addEventListener('click', () => {
     const currentParams = getCurrentParams();
     
-    createWorld(
-        currentParams,
-        world,
-        Matter,
-        render,
-        worldBodies
-    );
+    try {
+        createWorld(
+            currentParams,
+            world,
+            Matter,
+            render,
+            worldBodies
+        );
+    } catch (error) {
+        alert(error.message);
+    }
 }); 

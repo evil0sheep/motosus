@@ -1,5 +1,10 @@
 // Geometry utility functions
 export function triangleVertices(a, b, c) {  
+    // Validate triangle inequality theorem
+    if (a >= b + c || b >= a + c || c >= a + b) {
+        throw new Error('Invalid triangle: each side must be less than the sum of the other two sides');
+    }
+
     // Place vertex C at the origin (0, 0).
     const C = { x: 0, y: 0 };
   
@@ -16,6 +21,34 @@ export function triangleVertices(a, b, c) {
     return [C, B, A];
 }
 
+export function triangleVerticesNamed(sideA, sideB, sideC) {
+    // Validate input parameters have required properties
+    const sides = [sideA, sideB, sideC];
+    sides.forEach((side, index) => {
+        if (!side || typeof side.value !== 'number' || typeof side.displayName !== 'string') {
+            throw new Error(`Invalid side parameter at position ${index}: must have numeric 'value' and string 'displayName' properties`);
+        }
+    });
+
+    try {
+        return triangleVertices(sideA.value, sideB.value, sideC.value);
+    } catch (error) {
+        if (error.message.includes('Invalid triangle')) {
+            let invalidSide;
+            if (sideA.value >= sideB.value + sideC.value) {
+                invalidSide = sideA.displayName;
+            } else if (sideB.value >= sideA.value + sideC.value) {
+                invalidSide = sideB.displayName;
+            } else {
+                invalidSide = sideC.displayName;
+            }
+            
+            throw new Error(`Invalid geometry: "${invalidSide}" (${sideA.value}mm) is too long to form a valid triangle with "${sideB.displayName}" (${sideB.value}mm) and "${sideC.displayName}" (${sideC.value}mm)`);
+        }
+        throw error; // Re-throw other errors
+    }
+}
+
 export function triangleCentroid(vertices) {
     const x = (vertices[0].x + vertices[1].x + vertices[2].x) / 3;
     const y = (vertices[0].y + vertices[1].y + vertices[2].y) / 3;
@@ -24,10 +57,10 @@ export function triangleCentroid(vertices) {
 
 // Function to generate motorcycle geometry
 export function generateGeometry(frameParams, simulationParams) {
-    const frameVertices = triangleVertices(
-        frameParams.headTubeLength.defaultValue,
-        frameParams.swingArmPivotToHeadTubeTopCenter.defaultValue,
-        frameParams.swingArmPivotToHeadTubeBottomCenter.defaultValue
+    const frameVertices = triangleVerticesNamed(
+        frameParams.headTubeLength,
+        frameParams.swingArmPivotToHeadTubeTopCenter,
+        frameParams.swingArmPivotToHeadTubeBottomCenter
     );
     const swingArmPivot = frameVertices[0];
     const headTubeBottom = frameVertices[1];
@@ -36,8 +69,8 @@ export function generateGeometry(frameParams, simulationParams) {
 
     const forkWidth = 20;
     const forkVertices = [
-        { x: -forkWidth/2, y: -frameParams.frontForkLength.defaultValue },
-        { x: forkWidth/2, y: -frameParams.frontForkLength.defaultValue },
+        { x: -forkWidth/2, y: -frameParams.frontForkLength.value },
+        { x: forkWidth/2, y: -frameParams.frontForkLength.value },
         { x: forkWidth/2, y: 0 },
         { x: -forkWidth/2, y: 0 }
     ];
@@ -46,8 +79,8 @@ export function generateGeometry(frameParams, simulationParams) {
     const groundGeometry = {
         x: 0,
         y: 0, // Ground is now at origin
-        width: simulationParams.groundWidth.defaultValue,
-        height: simulationParams.groundHeight.defaultValue
+        width: simulationParams.groundWidth.value,
+        height: simulationParams.groundHeight.value
     };
 
     return {

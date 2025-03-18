@@ -56,8 +56,8 @@ function createBodies(geometry, params, Matter) {
     bodies['ground'] = Matter.Bodies.rectangle(
         geometry.groundGeometry.x,
         geometry.groundGeometry.y,
-        params.simulation.groundWidth.defaultValue,
-        params.simulation.groundHeight.defaultValue,
+        params.simulation.groundWidth.value,
+        params.simulation.groundHeight.value,
         {
             isStatic: true,
             render: {
@@ -114,7 +114,7 @@ function createBodies(geometry, params, Matter) {
                 bodyB: bodies.fork,
                 pointB: {
                     x: 0,
-                    y: -params.frame.frontForkLength.defaultValue/2
+                    y: -params.frame.frontForkLength.value/2
                 },
                 stiffness: 1,
                 length: 0
@@ -129,7 +129,7 @@ function createBodies(geometry, params, Matter) {
                 bodyB: bodies.fork,
                 pointB: {
                     x: 0,
-                    y: params.frame.headTubeLength.defaultValue - params.frame.frontForkLength.defaultValue/2
+                    y: params.frame.headTubeLength.value - params.frame.frontForkLength.value/2
                 },
                 stiffness: 1,
                 length: 0
@@ -187,12 +187,12 @@ function updateBodies(params, worldBodies, Matter) {
     topConstraint.pointA.x = geometry.headTubeTop.x - geometry.frameCentroid.x;
     topConstraint.pointA.y = geometry.headTubeTop.y - geometry.frameCentroid.y;
     topConstraint.pointB.x = 0;
-    topConstraint.pointB.y = -params.frame.frontForkLength.defaultValue/2;
+    topConstraint.pointB.y = -params.frame.frontForkLength.value/2;
 
     bottomConstraint.pointA.x = geometry.headTubeBottom.x - geometry.frameCentroid.x;
     bottomConstraint.pointA.y = geometry.headTubeBottom.y - geometry.frameCentroid.y;
     bottomConstraint.pointB.x = 0;
-    bottomConstraint.pointB.y = params.frame.headTubeLength.defaultValue - params.frame.frontForkLength.defaultValue/2;
+    bottomConstraint.pointB.y = params.frame.headTubeLength.value - params.frame.frontForkLength.value/2;
 }
 
 // Function to create the world and motorcycle
