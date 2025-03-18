@@ -4,16 +4,18 @@ const { Engine, Render, World, Bodies, Body, Composite, Constraint, Mouse, Mouse
 // Collision categories and masks
 const CATEGORIES = {
     FRAME: 0x0001,
+    GROUND: 0x0002,
 };
 
 const MASKS = {
     NONE: 0x0000,
-    FRAME: 0x0001
+    FRAME: 0x0002,  // Frame collides with ground
+    GROUND: 0x0001  // Ground collides with frame
 };
 
 // Create engine and world
 const engine = Engine.create();
-engine.world.gravity.y = 0; // Disable gravity
+engine.world.gravity.y = 1; // Enable gravity
 const world = engine.world;
 
 // Canvas dimensions
@@ -77,6 +79,20 @@ function createFrame(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBo
     bodies = {};
     frameConstraints = [];
 
+    // Create ground
+    const ground = Bodies.rectangle(0, CANVAS_HEIGHT - 60, CANVAS_WIDTH * 2, 120, {
+        isStatic: true,
+        render: {
+            fillStyle: '#888888'
+        },
+        collisionFilter: {
+            category: CATEGORIES.GROUND,
+            mask: MASKS.GROUND
+        }
+    });
+    bodies['ground'] = ground;
+    World.add(world, ground);
+
     // Calculate initial positions for the frame points
     const centerX = CANVAS_WIDTH / 2;
     const centerY = CANVAS_HEIGHT / 2;
@@ -97,7 +113,7 @@ function createFrame(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBo
             render: { fillStyle: '#4CAF50' },
             collisionFilter: {
                 category: CATEGORIES.FRAME,
-                mask: MASKS.NONE
+                mask: MASKS.FRAME
             }
         }
     );
@@ -130,7 +146,7 @@ function createFrame(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBo
             render: { fillStyle: '#FF4444' },
             collisionFilter: {
                 category: CATEGORIES.FRAME,
-                mask: MASKS.NONE
+                mask: MASKS.FRAME
             }
         }
     );
@@ -140,34 +156,42 @@ function createFrame(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBo
 
     const frameCentroid = triangleCentroid(frameVertices);
 
-    Body.translate(forkBody, {
-        x: 0, 
-        y: frontForkLength/2   // translate down in fork's local space
-    });
-
-    // First rotate the fork to match head tube angle
-    Body.rotate(forkBody, -headTubeAngle, {x: 0, y: 0});
-
-    // Then position it at the head tube bottom
-    Body.translate(forkBody, {
-        x: headTubeTop.x - frameCentroid.x,
-        y: headTubeTop.y - frameCentroid.y,
-    });
-
-
-
-
-    // Body.setPosition(forkBody, {
-    //     x: 0,
-    //     y: 0,
-    // });
-
-    bodies['fork'] = forkBody;
 
     // Create a composite of the frame and fork
     const motorcycle = Composite.create({
         bodies: [frameBody, forkBody],
-        constraints: [] // No constraints needed
+        constraints: [
+            // Add pivot constraint at head tube top
+            Constraint.create({
+                bodyA: frameBody,
+                pointA: {
+                    x: headTubeTop.x - frameCentroid.x,
+                    y: headTubeTop.y - frameCentroid.y
+                },
+                bodyB: forkBody,
+                pointB: {
+                    x: 0,
+                    y: -frontForkLength/2
+                },
+                stiffness: 1,
+                length: 0
+            }),
+            // Add pivot constraint at head tube bottom
+            Constraint.create({
+                bodyA: frameBody,
+                pointA: {
+                    x: headTubeBottom.x - frameCentroid.x,
+                    y: headTubeBottom.y - frameCentroid.y
+                },
+                bodyB: forkBody,
+                pointB: {
+                    x: 0,
+                    y: headTubeLength - frontForkLength/2
+                },
+                stiffness: 1,
+                length: 0
+            })
+        ]
     });
 
     // Create origin marker (small red circle)
@@ -185,15 +209,40 @@ function createFrame(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBo
     });
     
     // Add the origin marker to the composite
-    Composite.add(motorcycle, originMarker);
+    World.add(world, originMarker);
 
     // Add the composite to the world
     World.add(world, motorcycle);
 
     // Store the composite in our bodies object for future reference
     bodies['motorcycle'] = motorcycle;
-    // Get the bounds of the composite body
-    const bounds = Composite.bounds(motorcycle);
+    
+    // Get the bounds of the motorcycle
+    const motorcycleBounds = Composite.bounds(motorcycle);
+    
+    // Calculate ground bounds from its known position and dimensions
+    const groundBounds = {
+        min: {
+            x: -CANVAS_WIDTH,  // ground center (0) - width
+            y: CANVAS_HEIGHT - 120              // ground y - height
+        },
+        max: {
+            x: CANVAS_WIDTH,  // ground center (0) + width
+            y: CANVAS_HEIGHT                    // ground y
+        }
+    };
+    
+    // Calculate combined bounds
+    const bounds = {
+        min: {
+            x: Math.min(motorcycleBounds.min.x, groundBounds.min.x),
+            y: Math.min(motorcycleBounds.min.y, groundBounds.min.y)
+        },
+        max: {
+            x: Math.max(motorcycleBounds.max.x, groundBounds.max.x),
+            y: Math.max(motorcycleBounds.max.y, groundBounds.max.y)
+        }
+    };
 
     // Add a small padding to the bounds
     const padding = 50; // Adjust as needed
@@ -208,7 +257,7 @@ function createFrame(swingArmPivotToHeadTubeTopCenter, swingArmPivotToHeadTubeBo
         },
     };
 
-    // Use Render.lookAt to fit the composite body within the viewport
+    // Use Render.lookAt to fit everything within the viewport
     Render.lookAt(render, paddedBounds);
 }
 
