@@ -19,30 +19,16 @@ const { world, render } = initPhysics(Matter, document.getElementById('canvas-co
 
 // Create default frame parameters object
 const getDefaultParams = () => {
-    return {
-        frame: {
-            swingArmPivotToHeadTubeTopCenter: {
-                defaultValue: params.frame.swingArmPivotToHeadTubeTopCenter.defaultValue
-            },
-            swingArmPivotToHeadTubeBottomCenter: {
-                defaultValue: params.frame.swingArmPivotToHeadTubeBottomCenter.defaultValue
-            },
-            headTubeLength: {
-                defaultValue: params.frame.headTubeLength.defaultValue
-            },
-            frontForkLength: {
-                defaultValue: params.frame.frontForkLength.defaultValue
-            }
-        },
-        simulation: {
-            groundWidth: {
-                defaultValue: params.simulation.groundWidth.defaultValue
-            },
-            groundHeight: {
-                defaultValue: params.simulation.groundHeight.defaultValue
-            }
-        }
-    };
+    return params;
+};
+
+// Get current parameters from UI sliders
+const getCurrentParams = () => {
+    const currentParams = getDefaultParams();
+    Object.keys(params.frame).forEach(key => {
+        currentParams.frame[key].defaultValue = parseInt(document.getElementById(key).value);
+    });
+    return currentParams;
 };
 
 // Initialize the world with default values
@@ -84,21 +70,14 @@ sliders.forEach(slider => {
         const value = e.target.value;
         document.getElementById(`${e.target.id}Value`).textContent = value;
         
-        const currentParams = getDefaultParams();
-        Object.keys(params.frame).forEach(key => {
-            currentParams.frame[key].defaultValue = parseInt(document.getElementById(key).value);
-        });
-        
+        const currentParams = getCurrentParams();
         updateBodies(currentParams, worldBodies, Matter, canvasSize);
     });
 });
 
 // Handle reset button click
 document.getElementById('resetButton').addEventListener('click', () => {
-    const currentParams = getDefaultParams();
-    Object.keys(params.frame).forEach(key => {
-        currentParams.frame[key].defaultValue = parseInt(document.getElementById(key).value);
-    });
+    const currentParams = getCurrentParams();
     
     createWorld(
         currentParams,
