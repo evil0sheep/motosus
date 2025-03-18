@@ -39,10 +39,43 @@ const slidersContainer = document.getElementById('sliders-container');
 Object.entries(defaultParams.frame).forEach(([key, config]) => {
     const container = document.createElement('div');
     container.className = 'slider-container';
+    container.style.marginBottom = '15px';
+    
+    // Top row container
+    const topRow = document.createElement('div');
+    topRow.style.display = 'flex';
+    topRow.style.alignItems = 'center';
+    topRow.style.gap = '10px';
+    topRow.style.marginBottom = '5px';
+    topRow.style.justifyContent = 'space-between';
     
     const label = document.createElement('label');
     label.htmlFor = key;
-    label.textContent = `${config.displayName} (${config.unit})`;
+    label.textContent = config.displayName;
+    label.style.minWidth = '120px';
+    
+    // Right-aligned container for text input and units
+    const rightContainer = document.createElement('div');
+    rightContainer.style.display = 'flex';
+    rightContainer.style.alignItems = 'center';
+    rightContainer.style.gap = '5px';
+    
+    const textInput = document.createElement('input');
+    textInput.type = 'text';
+    textInput.id = `${key}Text`;
+    textInput.className = 'value-input';
+    textInput.value = config.value;
+    textInput.style.width = '60px';
+    textInput.style.textAlign = 'right';
+    
+    const unitSpan = document.createElement('span');
+    unitSpan.className = 'unit-display';
+    unitSpan.textContent = config.unit;
+    unitSpan.style.minWidth = '40px';
+    
+    // Bottom row container
+    const bottomRow = document.createElement('div');
+    bottomRow.style.width = '100%';
     
     const slider = document.createElement('input');
     slider.type = 'range';
@@ -50,15 +83,17 @@ Object.entries(defaultParams.frame).forEach(([key, config]) => {
     slider.min = Math.round(config.value * 0.5); // 50% of default
     slider.max = Math.round(config.value * 1.5); // 150% of default
     slider.value = config.value;
+    slider.style.width = '100%';
     
-    const valueDisplay = document.createElement('span');
-    valueDisplay.id = `${key}Value`;
-    valueDisplay.className = 'value-display';
-    valueDisplay.textContent = config.value;
+    // Assemble the layout
+    rightContainer.appendChild(textInput);
+    rightContainer.appendChild(unitSpan);
+    topRow.appendChild(label);
+    topRow.appendChild(rightContainer);
+    bottomRow.appendChild(slider);
     
-    container.appendChild(label);
-    container.appendChild(slider);
-    container.appendChild(valueDisplay);
+    container.appendChild(topRow);
+    container.appendChild(bottomRow);
     slidersContainer.appendChild(container);
 });
 
@@ -68,7 +103,7 @@ const sliders = document.querySelectorAll('input[type="range"]');
 sliders.forEach(slider => {
     slider.addEventListener('input', (e) => {
         const value = e.target.value;
-        document.getElementById(`${e.target.id}Value`).textContent = value;
+        document.getElementById(`${e.target.id}Text`).value = value;
         
         const currentParams = getCurrentParams();
         try {
@@ -76,8 +111,42 @@ sliders.forEach(slider => {
         } catch (error) {
             // Revert the slider to its previous value
             e.target.value = e.target.defaultValue;
-            document.getElementById(`${e.target.id}Value`).textContent = e.target.defaultValue;
+            document.getElementById(`${e.target.id}Text`).value = e.target.defaultValue;
             alert(error.message);
+        }
+    });
+});
+
+// Handle text input changes
+const textInputs = document.querySelectorAll('input[type="text"]');
+textInputs.forEach(textInput => {
+    textInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const value = parseInt(e.target.value);
+            const paramKey = e.target.id.replace('Text', '');
+            const slider = document.getElementById(paramKey);
+            const min = parseInt(slider.min);
+            const max = parseInt(slider.max);
+            
+            if (isNaN(value) || value < min || value > max) {
+                // Revert to previous value if invalid
+                e.target.value = slider.value;
+                alert(`Please enter a valid number between ${min} and ${max}`);
+                return;
+            }
+            
+            // Update slider
+            slider.value = value;
+            
+            const currentParams = getCurrentParams();
+            try {
+                updateBodies(currentParams, worldBodies, Matter, canvasSize);
+            } catch (error) {
+                // Revert all values on error
+                slider.value = slider.defaultValue;
+                e.target.value = slider.defaultValue;
+                alert(error.message);
+            }
         }
     });
 });
