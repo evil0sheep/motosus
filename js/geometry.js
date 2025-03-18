@@ -1,5 +1,5 @@
 // Geometry utility functions
-function triangleVertices(a, b, c) {  
+export function triangleVertices(a, b, c) {  
     // Place vertex C at the origin (0, 0).
     const C = { x: 0, y: 0 };
   
@@ -16,7 +16,7 @@ function triangleVertices(a, b, c) {
     return [C, B, A];
 }
 
-function triangleCentroid(vertices) {
+export function triangleCentroid(vertices) {
     const x = (vertices[0].x + vertices[1].x + vertices[2].x) / 3;
     const y = (vertices[0].y + vertices[1].y + vertices[2].y) / 3;
     return { x, y };
