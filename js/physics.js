@@ -276,13 +276,15 @@ function updateBodies(params, worldBodies, world) {
     }
 
     // Create prismatic joint
-    const forkAxis = Vec2(0, 1); // Vertical axis
+    const forkAxis = Vec2(geometry.headTubeTop.x - geometry.headTubeBottom.x, geometry.headTubeTop.y - geometry.headTubeBottom.y); 
+    forkAxis.normalize();
     const anchor = Vec2(geometry.headTubeBottom.x, geometry.headTubeBottom.y);
     
+    const forkTravel = 0.15;
     const prismaticJoint = PrismaticJoint({
         enableLimit: true,
-        lowerTranslation: -0.15, // 15cm compression
-        upperTranslation: 0.0,   // No extension
+        lowerTranslation: 0, 
+        upperTranslation: forkTravel,  
         enableMotor: false
     }, frameBody, bottomForkBody, anchor, forkAxis);
     

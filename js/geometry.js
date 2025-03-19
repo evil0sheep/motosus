@@ -92,13 +92,17 @@ export function generateGeometry(frameParams, simulationParams) {
         { x: -forkWidth/2, y: 0 }
     ], forkTopTransform);
 
+
+    const forkBottomTransform = compose(
+        forkTopTransform,
+        translate(0, -frameParams.topForkTubeLength.value)); 
     // Generate bottom fork tube vertices
     const forkBottomVertices = transformPoints([
         { x: -forkWidth/2, y: -frameParams.bottomForkTubeLength.value },
         { x: forkWidth/2, y: -frameParams.bottomForkTubeLength.value },
         { x: forkWidth/2, y: 0 },
         { x: -forkWidth/2, y: 0 }
-    ], forkTopTransform);
+    ], forkBottomTransform);
 
     // Create ground geometry using simulation parameters
     const groundGeometry = {

@@ -48,6 +48,35 @@ window.addEventListener('load', () => {
     // Initialize the world with default values
     createWorld(getDefaultParams(), world, { canvas, ctx }, worldBodies);
 
+    // Create gravity toggle
+    const gravityContainer = document.createElement('div');
+    gravityContainer.style.marginBottom = '20px';
+    gravityContainer.style.display = 'flex';
+    gravityContainer.style.alignItems = 'center';
+    gravityContainer.style.gap = '10px';
+
+    const gravityCheckbox = document.createElement('input');
+    gravityCheckbox.type = 'checkbox';
+    gravityCheckbox.id = 'gravityToggle';
+    gravityCheckbox.checked = true; // Gravity on by default
+
+    const gravityLabel = document.createElement('label');
+    gravityLabel.htmlFor = 'gravityToggle';
+    gravityLabel.textContent = 'Enable Gravity';
+    gravityLabel.style.color = '#666';
+
+    gravityContainer.appendChild(gravityCheckbox);
+    gravityContainer.appendChild(gravityLabel);
+
+    const controls = document.getElementById('controls');
+    controls.insertBefore(gravityContainer, document.getElementById('sliders-container'));
+
+    // Handle gravity toggle
+    gravityCheckbox.addEventListener('change', (e) => {
+        const gravity = e.target.checked ? 9.81 : 0;
+        world.setGravity({ x: 0, y: gravity });
+    });
+
     // Create UI controls
     const slidersContainer = document.getElementById('sliders-container');
     Object.entries(defaultParams.frame).forEach(([key, config]) => {
@@ -123,7 +152,7 @@ window.addEventListener('load', () => {
             
             const currentParams = getCurrentParams();
             try {
-                updateBodies(currentParams, worldBodies);
+                updateBodies(currentParams, worldBodies, world);
             } catch (error) {
                 // Revert the slider to its previous value
                 e.target.value = e.target.defaultValue;
@@ -156,7 +185,7 @@ window.addEventListener('load', () => {
                 
                 const currentParams = getCurrentParams();
                 try {
-                    updateBodies(currentParams, worldBodies);
+                    updateBodies(currentParams, worldBodies, world);
                 } catch (error) {
                     // Revert all values on error
                     slider.value = slider.defaultValue;

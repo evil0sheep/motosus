@@ -4,7 +4,7 @@ export const defaultParams = {
     frame: {
         swingArmPivotToHeadTubeTopCenter: {
             displayName: "Swing Arm Pivot to Head Tube Top Center",
-            value: 0.8,  
+            value: 0.75,  
             unit: "m"
         },
         swingArmPivotToHeadTubeBottomCenter: {
@@ -36,12 +36,12 @@ export const defaultParams = {
         },
         groundWidth: {
             displayName: "Ground Width",
-            value: 2.0,  
+            value: 4.0,  
             unit: "m"
         },
         forkSpringFrequency: {
             displayName: "Fork Spring Frequency",
-            value: 10.0,
+            value: 1.0,
             unit: "Hz"
         },
         forkSpringDamping: {
