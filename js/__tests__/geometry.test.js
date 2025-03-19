@@ -1,4 +1,37 @@
 import { triangleVertices, triangleCentroid, generateGeometry, triangleVerticesNamed } from '../geometry.js';
+import { distance, transformPoints } from '../geometry.js';
+import { scale, rotate, translate, compose } from 'transformation-matrix';
+
+describe('distance', () => {
+    test('should calculate correct distance between two points', () => {
+        const p1 = { x: 0, y: 0 };
+        const p2 = { x: 3, y: 4 };
+        // Should be a 3-4-5 triangle, so distance should be 5
+        expect(distance(p1, p2)).toBe(5);
+    });
+});
+
+describe('transformPoints', () => {
+    test('should correctly transform array of points', () => {
+        const points = [
+            { x: 1, y: 0 },
+            { x: 0, y: 1 }
+        ];
+        
+        // Create a transform that rotates 90 degrees clockwise around origin
+        const transform = rotate(-Math.PI/2);
+        
+        const transformed = transformPoints(points, transform);
+        
+        // After 90 degree clockwise rotation:
+        // (1,0) should become (0,-1)
+        // (0,1) should become (1,0)
+        expect(transformed[0].x).toBeCloseTo(0);
+        expect(transformed[0].y).toBeCloseTo(-1);
+        expect(transformed[1].x).toBeCloseTo(1);
+        expect(transformed[1].y).toBeCloseTo(0);
+    });
+});
 
 describe('triangle geometry', () => {
     test('centroid should be inside triangle', () => {
