@@ -84,12 +84,13 @@ export function generateGeometry(frameParams, simulationParams) {
         rotate(Math.atan2(headTubeBottom.x - headTubeTop.x, headTubeTop.y - headTubeBottom.y)),
         translate(0, distance(headTubeBottom, headTubeTop))); 
 
-    const forkWidth = frameParams.topForkTubeLength.value * 0.1;
+    const forkWidthMultiplier = 0.2;
+    const forkTopWidth = frameParams.topForkTubeLength.value * forkWidthMultiplier;
     const forkTopVertices = transformPoints([
-        { x: -forkWidth/2, y: -frameParams.topForkTubeLength.value },
-        { x: forkWidth/2, y: -frameParams.topForkTubeLength.value },
-        { x: forkWidth/2, y: 0 },
-        { x: -forkWidth/2, y: 0 }
+        { x: -forkTopWidth/2, y: -frameParams.topForkTubeLength.value },
+        { x: forkTopWidth/2, y: -frameParams.topForkTubeLength.value },
+        { x: forkTopWidth/2, y: 0 },
+        { x: -forkTopWidth/2, y: 0 }
     ], forkTopTransform);
 
 
@@ -97,11 +98,12 @@ export function generateGeometry(frameParams, simulationParams) {
         forkTopTransform,
         translate(0, -frameParams.topForkTubeLength.value)); 
     // Generate bottom fork tube vertices
+    const forkBottomWidth = frameParams.bottomForkTubeLength.value * forkWidthMultiplier;
     const forkBottomVertices = transformPoints([
-        { x: -forkWidth/2, y: -frameParams.bottomForkTubeLength.value },
-        { x: forkWidth/2, y: -frameParams.bottomForkTubeLength.value },
-        { x: forkWidth/2, y: 0 },
-        { x: -forkWidth/2, y: 0 }
+        { x: -forkBottomWidth/2, y: -frameParams.bottomForkTubeLength.value },
+        { x: forkBottomWidth/2, y: -frameParams.bottomForkTubeLength.value },
+        { x: forkBottomWidth/2, y: 0 },
+        { x: -forkBottomWidth/2, y: 0 }
     ], forkBottomTransform);
 
     // Create ground geometry using simulation parameters

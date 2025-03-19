@@ -19,12 +19,12 @@ export const defaultParams = {
         },
         topForkTubeLength: {
             displayName: "Top Fork Tube Length",
-            value: 0.2,  
+            value: 0.3,  
             unit: "m"
         },
         bottomForkTubeLength: {
             displayName: "Bottom Fork Tube Length",
-            value: 0.3,  
+            value: 0.2,  
             unit: "m"
         }
     },

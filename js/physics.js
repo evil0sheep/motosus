@@ -154,7 +154,72 @@ function draw(ctx, world) {
         ctx.restore();
     }
     
-    ctx.restore();
+    // Draw joints with enhanced visibility and debugging
+    for (let joint = world.getJointList(); joint; joint = joint.getNext()) {
+        const type = joint.getType();
+        const anchorA = joint.getAnchorA();
+        const anchorB = joint.getAnchorB();
+        
+        // Draw anchor points as visible dots
+        ctx.beginPath();
+        ctx.fillStyle = '#FF0000';
+        ctx.arc(anchorA.x, anchorA.y, 0.01, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.fillStyle = '#0000FF';
+        ctx.arc(anchorB.x, anchorB.y, 0.01, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        if (type === 'prismatic-joint') {
+            // Draw prismatic joint connection
+            ctx.beginPath();
+            ctx.strokeStyle = '#FFD700'; // Gold
+            ctx.lineWidth = 0.008;
+            ctx.moveTo(anchorA.x, anchorA.y);
+            ctx.lineTo(anchorB.x, anchorB.y);
+            ctx.stroke();
+        } else if (type === 'distance-joint') {
+            // Draw spring visualization
+            const dx = anchorB.x - anchorA.x;
+            const dy = anchorB.y - anchorA.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const segments = 12; // More segments for smoother zigzag
+            
+            // Calculate perpendicular unit vector for zigzag
+            const perpScale = 0.0125; // Reduced zigzag amplitude
+            const perpX = -dy / distance;
+            const perpY = dx / distance;
+            
+            ctx.beginPath();
+            ctx.strokeStyle = '#FF69B4'; // Pink
+            ctx.lineWidth = 0.005;
+            
+            // Start from first anchor
+            ctx.moveTo(anchorA.x, anchorA.y);
+            
+            // Draw zigzag spring pattern
+            for (let i = 1; i < segments; i++) {
+                const t = i / segments;
+                const x = anchorA.x + dx * t;
+                const y = anchorA.y + dy * t;
+                
+                // Alternate between positive and negative offset
+                const offset = perpScale * (i % 2 === 0 ? 1 : -1);
+                
+                ctx.lineTo(
+                    x + perpX * offset,
+                    y + perpY * offset
+                );
+            }
+            
+            // End at second anchor
+            ctx.lineTo(anchorB.x, anchorB.y);
+            ctx.stroke();
+        }
+    }
+    
+    ctx.restore(); // Restore the main context
 }
 
 // Function to create all bodies for the simulation
@@ -232,7 +297,7 @@ function updateBodies(params, worldBodies, world) {
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.GROUND,
         filterMaskBits: MASKS.GROUND,
-        userData: { color: '#888888' }
+        userData: { color: '#333333' }
     });
 
     // Create frame fixtures
@@ -244,7 +309,7 @@ function updateBodies(params, worldBodies, world) {
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FRAME,
         filterMaskBits: MASKS.FRAME,
-        userData: { color: '#4CAF50' }
+        userData: { color: '#333333' }
     });
 
     const forkTopVertices = geometry.forkTopVertices.map(v => Vec2(v.x, v.y));
@@ -255,7 +320,7 @@ function updateBodies(params, worldBodies, world) {
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FRAME,
         filterMaskBits: MASKS.FRAME,
-        userData: { color: '#FF4444' }
+        userData: { color: '#333333' }
     });
 
     // Create bottom fork fixture
@@ -267,7 +332,7 @@ function updateBodies(params, worldBodies, world) {
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FORK,
         filterMaskBits: MASKS.FORK,
-        userData: { color: '#FF8888' }
+        userData: { color: '#333333' }
     });
 
     // Clear existing joints
@@ -278,27 +343,47 @@ function updateBodies(params, worldBodies, world) {
     // Create prismatic joint
     const forkAxis = Vec2(geometry.headTubeTop.x - geometry.headTubeBottom.x, geometry.headTubeTop.y - geometry.headTubeBottom.y); 
     forkAxis.normalize();
-    const anchor = Vec2(geometry.headTubeBottom.x, geometry.headTubeBottom.y);
+    
+    // Use geometry points directly as local anchors since they're already in local space
+    const localAnchorA = Vec2(geometry.headTubeBottom.x, geometry.headTubeBottom.y);
+    const localAnchorB = Vec2(geometry.headTubeBottom.x, geometry.headTubeBottom.y);
     
     const forkTravel = 0.15;
     const prismaticJoint = PrismaticJoint({
         enableLimit: true,
         lowerTranslation: 0, 
         upperTranslation: forkTravel,  
-        enableMotor: false
-    }, frameBody, bottomForkBody, anchor, forkAxis);
+        enableMotor: false,
+        localAxisA: forkAxis, // Specify the axis in local coordinates
+        localAnchorA: localAnchorA,
+        localAnchorB: localAnchorB
+    }, frameBody, bottomForkBody);
     
     world.createJoint(prismaticJoint);
 
-    // Create distance joint
-    const topAnchor = Vec2(geometry.headTubeBottom.x, geometry.headTubeBottom.y);
-    const bottomAnchor = Vec2(geometry.headTubeBottom.x, geometry.headTubeBottom.y - params.frame.bottomForkTubeLength.value);
+    // Create distance joint (spring)
+    // Frame anchor at head tube bottom in local coordinates
+    const springLocalAnchorA = localAnchorA.clone();
+    
+    // Fork anchor at bottom of lower fork tube, following fork angle
+    const springLength = params.frame.bottomForkTubeLength.value + params.frame.topForkTubeLength.value - params.frame.headTubeLength.value;
+    const springLocalAnchorB = Vec2(
+        geometry.headTubeBottom.x - forkAxis.x * springLength,
+        geometry.headTubeBottom.y - forkAxis.y * springLength
+    );
+    
+    // Calculate spring length based on tube lengths
+    const springRestLength = params.frame.topForkTubeLength.value + 
+                           params.frame.bottomForkTubeLength.value - 
+                           params.frame.headTubeLength.value;
     
     const distanceJoint = DistanceJoint({
         frequencyHz: params.simulation.forkSpringFrequency.value,
         dampingRatio: params.simulation.forkSpringDamping.value,
-        length: params.frame.bottomForkTubeLength.value,
-    }, frameBody, bottomForkBody, topAnchor, bottomAnchor);
+        length: springRestLength,
+        localAnchorA: springLocalAnchorA,
+        localAnchorB: springLocalAnchorB
+    }, frameBody, bottomForkBody);
     
     world.createJoint(distanceJoint);
 }
