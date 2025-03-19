@@ -26,7 +26,7 @@ export default {
         compress: true,
         port: 8000,
         hot: false,
-        liveReload: false,
+        liveReload: true,
         client: {
             overlay: true,
             progress: true

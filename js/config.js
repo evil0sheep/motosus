@@ -21,6 +21,11 @@ export const defaultParams = {
             displayName: "Top Fork Tube Length",
             value: 0.3,  
             unit: "m"
+        },
+        bottomForkTubeLength: {
+            displayName: "Bottom Fork Tube Length",
+            value: 0.3,  
+            unit: "m"
         }
     },
     simulation: {
@@ -33,6 +38,16 @@ export const defaultParams = {
             displayName: "Ground Width",
             value: 2.0,  
             unit: "m"
+        },
+        forkSpringFrequency: {
+            displayName: "Fork Spring Frequency",
+            value: 4.0,
+            unit: "Hz"
+        },
+        forkSpringDamping: {
+            displayName: "Fork Spring Damping",
+            value: 0.7,
+            unit: ""
         }
     }
 }; 
