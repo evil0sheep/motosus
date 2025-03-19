@@ -1,5 +1,6 @@
 import { generateGeometry } from './geometry.js';
 
+
 // Collision categories and masks
 const CATEGORIES = {
     FRAME: 0x0001,

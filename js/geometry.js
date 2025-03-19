@@ -1,3 +1,15 @@
+let {scale, rotate, translate, compose, applyToPoint} = window.TransformationMatrix;
+
+function distance(p1, p2) {
+    return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+}
+
+function transformPoints(points, matrix) {
+    return points.map(p => {
+        return applyToPoint(matrix, { x: p.x, y: p.y });
+    });
+}
+
 // Geometry utility functions
 export function triangleVertices(a, b, c) {  
     // Validate triangle inequality theorem
@@ -67,13 +79,19 @@ export function generateGeometry(frameParams, simulationParams) {
     const headTubeTop = frameVertices[2];
     const frameCentroid = triangleCentroid(frameVertices);
 
+    const forkTopTransform = compose(
+        translate(headTubeBottom.x -swingArmPivot.x, headTubeBottom.y -swingArmPivot.y), 
+        rotate(Math.atan2(headTubeBottom.x - headTubeTop.x, headTubeTop.y - headTubeBottom.y)),
+        translate(0, distance(headTubeBottom, headTubeTop))); 
+
     const forkWidth = frameParams.topForkTubeLength.value * 0.1;
-    const forkTopVertices = [
+    const forkTopVertices = transformPoints([
         { x: -forkWidth/2, y: -frameParams.topForkTubeLength.value },
         { x: forkWidth/2, y: -frameParams.topForkTubeLength.value },
         { x: forkWidth/2, y: 0 },
         { x: -forkWidth/2, y: 0 }
-    ];
+    ], forkTopTransform);
+
 
     // Create ground geometry using simulation parameters
     const groundGeometry = {
