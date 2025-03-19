@@ -1,5 +1,3 @@
-import * as planck from 'planck';
-
 //Dont add the Matter.js module aliases here because we are referencing them through the Matter object for consistency across files
 
 // Import physics functions and configuration
@@ -19,7 +17,7 @@ let worldBodies = {};
 // Initialize when DOM is loaded
 window.addEventListener('load', () => {
     // Initialize physics engine and get Planck.js objects
-    const { world, canvas, ctx } = initPhysics(planck, document.getElementById('canvas-container'), canvasSize);
+    const { world, canvas, ctx } = initPhysics(document.getElementById('canvas-container'), canvasSize);
 
     // Create default frame parameters object
     const getDefaultParams = () => {
@@ -36,7 +34,7 @@ window.addEventListener('load', () => {
     };
 
     // Initialize the world with default values
-    createWorld(getDefaultParams(), world, planck, { canvas, ctx }, worldBodies);
+    createWorld(getDefaultParams(), world, { canvas, ctx }, worldBodies);
 
     // Create UI controls
     const slidersContainer = document.getElementById('sliders-container');
@@ -113,7 +111,7 @@ window.addEventListener('load', () => {
             
             const currentParams = getCurrentParams();
             try {
-                updateBodies(currentParams, worldBodies, planck);
+                updateBodies(currentParams, worldBodies);
             } catch (error) {
                 // Revert the slider to its previous value
                 e.target.value = e.target.defaultValue;
@@ -146,7 +144,7 @@ window.addEventListener('load', () => {
                 
                 const currentParams = getCurrentParams();
                 try {
-                    updateBodies(currentParams, worldBodies, planck);
+                    updateBodies(currentParams, worldBodies);
                 } catch (error) {
                     // Revert all values on error
                     slider.value = slider.defaultValue;
@@ -165,7 +163,6 @@ window.addEventListener('load', () => {
             createWorld(
                 currentParams,
                 world,
-                planck,
                 { canvas, ctx },
                 worldBodies
             );

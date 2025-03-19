@@ -1,6 +1,5 @@
 import { initPhysics, createWorld, updateBodies, CATEGORIES, MASKS } from '../physics.js';
 import { defaultParams } from '../config.js';
-import planck from 'planck';
 import { createCanvas } from 'canvas';
 
 // Helper function to clone params to avoid modifying the original
@@ -43,7 +42,7 @@ describe('physics.js', () => {
 
     describe('initPhysics', () => {
         it('should initialize Planck.js world and renderer', () => {
-            const { world, canvas, ctx } = initPhysics(planck, canvasContainer, canvasSize);
+            const { world, canvas, ctx } = initPhysics(canvasContainer, canvasSize);
 
             // Check world
             expect(world).toBeDefined();
@@ -62,13 +61,13 @@ describe('physics.js', () => {
         let worldBodies;
 
         beforeEach(() => {
-            const physics = initPhysics(planck, canvasContainer, canvasSize);
+            const physics = initPhysics(canvasContainer, canvasSize);
             world = physics.world;
             worldBodies = {};
         });
 
         it('should create all required bodies', () => {
-            createWorld(cloneParams(), world, planck, null, worldBodies);
+            createWorld(cloneParams(), world, null, worldBodies);
 
             // Check that all required bodies exist
             expect(worldBodies.ground).toBeDefined();
@@ -76,7 +75,7 @@ describe('physics.js', () => {
         });
 
         it('should set correct collision filters', () => {
-            createWorld(cloneParams(), world, planck, null, worldBodies);
+            createWorld(cloneParams(), world, null, worldBodies);
 
             // Check ground collision filter
             const groundFixture = worldBodies.ground.getFixtureList();
@@ -95,12 +94,12 @@ describe('physics.js', () => {
         let worldBodies;
 
         beforeEach(() => {
-            const physics = initPhysics(planck, canvasContainer, canvasSize);
+            const physics = initPhysics(canvasContainer, canvasSize);
             world = physics.world;
             worldBodies = {};
 
             // Create initial world
-            createWorld(cloneParams(), world, planck, null, worldBodies);
+            createWorld(cloneParams(), world, null, worldBodies);
         });
 
         it('should update motorcycle geometry when frame parameters change', () => {
@@ -117,7 +116,7 @@ describe('physics.js', () => {
             const originalFrameShape = frameFixture.getShape();
             const originalForkTopShape = forkTopFixture.getShape();
 
-            updateBodies(newParams, worldBodies, planck);
+            updateBodies(newParams, worldBodies);
 
             // Get updated vertices
             const updatedFrameFixture = worldBodies.frame.getFixtureList();

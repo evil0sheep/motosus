@@ -1,3 +1,4 @@
+import { World, Vec2, Box, Polygon } from 'planck';
 import { generateGeometry } from './geometry.js';
 
 
@@ -14,10 +15,10 @@ const MASKS = {
 };
 
 // Function to initialize Planck.js physics engine and renderer
-function initPhysics(planck, canvasContainer, canvasSize) {
+function initPhysics(canvasContainer, canvasSize) {
     // Initialize Planck.js world
-    const world = planck.World({
-        gravity: planck.Vec2(0, 9.81) 
+    const world = World({
+        gravity: Vec2(0, 9.81) 
     });
 
     // Create canvas and context
@@ -94,16 +95,16 @@ function draw(ctx, world) {
 }
 
 // Function to create all bodies for the simulation
-function createBodies(geometry, params, planck, world) {
+function createBodies(geometry, params, world) {
     const bodies = {};
 
     // Create ground
     const groundBody = world.createBody({
         type: 'static',
-        position: planck.Vec2(0, 0)
+        position: Vec2(0, 0)
     });
     
-    const groundShape = planck.Box(
+    const groundShape = Box(
         params.simulation.groundWidth.value / 2, // Half width in meters
         params.simulation.groundHeight.value / 2  // Half height in meters
     );
@@ -122,17 +123,17 @@ function createBodies(geometry, params, planck, world) {
     // Create frame as a rigid body
     const frameBody = world.createBody({
         type: 'dynamic',
-        position: planck.Vec2(0, -1), 
+        position: Vec2(0, -1), 
         linearDamping: 0.1,
         angularDamping: 0.1
     });
 
     // Convert frame vertices to Planck.js format (in meters)
     const frameVertices = geometry.frameVertices.map(v => 
-        planck.Vec2(v.x, v.y)
+        Vec2(v.x, v.y)
     );
     
-    const frameShape = planck.Polygon(frameVertices);
+    const frameShape = Polygon(frameVertices);
     frameBody.createFixture(frameShape, {
         density: 1.0,
         friction: 0.3,
@@ -144,10 +145,10 @@ function createBodies(geometry, params, planck, world) {
 
     // Add fork as a second fixture to the frame body
     const forkTopVertices = geometry.forkTopVertices.map(v => 
-        planck.Vec2(v.x, v.y)
+        Vec2(v.x, v.y)
     );
     
-    const forkTopShape = planck.Polygon(forkTopVertices);
+    const forkTopShape = Polygon(forkTopVertices);
     frameBody.createFixture(forkTopShape, {
         density: 1.0,
         friction: 0.3,
@@ -163,7 +164,7 @@ function createBodies(geometry, params, planck, world) {
 }
 
 // Function to update motorcycle geometry without recreating bodies
-function updateBodies(params, worldBodies, planck) {
+function updateBodies(params, worldBodies) {
     if (!worldBodies.frame) return;
 
     const geometry = generateGeometry(params.frame, params.simulation);
@@ -182,9 +183,9 @@ function updateBodies(params, worldBodies, planck) {
 
     // Create new frame fixture
     const frameVertices = geometry.frameVertices.map(v => 
-        planck.Vec2(v.x, v.y)
+        Vec2(v.x, v.y)
     );
-    const frameShape = planck.Polygon(frameVertices);
+    const frameShape = Polygon(frameVertices);
     frameBody.createFixture(frameShape, {
         density: 1.0,
         friction: 0.3,
@@ -196,9 +197,9 @@ function updateBodies(params, worldBodies, planck) {
 
     // Create new fork fixture
     const forkTopVertices = geometry.forkTopVertices.map(v => 
-        planck.Vec2(v.x, v.y)
+        Vec2(v.x, v.y)
     );
-    const forkTopShape = planck.Polygon(forkTopVertices);
+    const forkTopShape = Polygon(forkTopVertices);
     frameBody.createFixture(forkTopShape, {
         density: 1.0,
         friction: 0.3,
@@ -210,7 +211,7 @@ function updateBodies(params, worldBodies, planck) {
 }
 
 // Function to create the world and motorcycle
-function createWorld(params, world, planck, render, worldBodies) {
+function createWorld(params, world, render, worldBodies) {
     // Clear existing bodies
     for (let body = world.getBodyList(); body; body = body.getNext()) {
         world.destroyBody(body);
@@ -222,7 +223,7 @@ function createWorld(params, world, planck, render, worldBodies) {
     });
 
     const geometry = generateGeometry(params.frame, params.simulation);
-    const newBodies = createBodies(geometry, params, planck, world);
+    const newBodies = createBodies(geometry, params, world);
     
     // Copy all properties from newBodies to worldBodies
     Object.assign(worldBodies, newBodies);
