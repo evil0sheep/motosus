@@ -1,6 +1,12 @@
 import { World, Vec2, Box, Polygon, PrismaticJoint, DistanceJoint, MouseJoint } from 'planck';
 import { generateGeometry } from './geometry.js';
+import { applyToPoint } from 'transformation-matrix';
 
+// Utility function to transform a Planck.js Vec2 using a transformation matrix
+function transformVec2(vec2, matrix) {
+    const point = applyToPoint(matrix, { x: vec2.x, y: vec2.y });
+    return Vec2(point.x, point.y);
+}
 
 // Collision categories and masks
 const CATEGORIES = {
@@ -156,16 +162,70 @@ function createBodies(geometry, params, world) {
     const bodies = {};
 
     // Create ground
-    const groundBody = world.createBody({
+    bodies['ground'] = world.createBody({
         type: 'static',
         position: Vec2(0, 0)
     });
+
+    // Create frame as a rigid body
+    bodies['frame'] = world.createBody({
+        type: 'dynamic',
+        position: Vec2(0, -1), 
+        linearDamping: 0.1,
+        angularDamping: 0.1
+    });
+
+    // Create bottom fork tube as a separate dynamic body
+    bodies['bottomFork'] = world.createBody({
+        type: 'dynamic',
+        position: Vec2(0, -1),
+        linearDamping: 0.1,
+        angularDamping: 0.1
+    });
+
+    // Update fixtures and joints
+    updateBodies(params, bodies, world);
+
+    return bodies;
+}
+
+// Function to update motorcycle geometry without recreating bodies
+function updateBodies(params, worldBodies, world) {
+    if (!worldBodies.frame) return;
+
+    const geometry = generateGeometry(params.frame, params.simulation);
+    const frameBody = worldBodies.frame;
+    const bottomForkBody = worldBodies.bottomFork;
+    const groundBody = worldBodies.ground;
     
+    // Clear existing fixtures from frame
+    const frameFixtures = [];
+    for (let fixture = frameBody.getFixtureList(); fixture; fixture = fixture.getNext()) {
+        frameFixtures.push(fixture);
+    }
+    frameFixtures.forEach(fixture => frameBody.destroyFixture(fixture));
+
+    // Clear existing fixtures from bottom fork
+    if (bottomForkBody) {
+        const bottomForkFixtures = [];
+        for (let fixture = bottomForkBody.getFixtureList(); fixture; fixture = fixture.getNext()) {
+            bottomForkFixtures.push(fixture);
+        }
+        bottomForkFixtures.forEach(fixture => bottomForkBody.destroyFixture(fixture));
+    }
+
+    // Clear existing fixtures from ground
+    const groundFixtures = [];
+    for (let fixture = groundBody.getFixtureList(); fixture; fixture = fixture.getNext()) {
+        groundFixtures.push(fixture);
+    }
+    groundFixtures.forEach(fixture => groundBody.destroyFixture(fixture));
+
+    // Create ground fixture
     const groundShape = Box(
-        params.simulation.groundWidth.value / 2, // Half width in meters
-        params.simulation.groundHeight.value / 2  // Half height in meters
+        params.simulation.groundWidth.value / 2,
+        params.simulation.groundHeight.value / 2
     );
-    
     groundBody.createFixture(groundShape, {
         density: 1.0,
         friction: 0.3,
@@ -174,22 +234,9 @@ function createBodies(geometry, params, world) {
         filterMaskBits: MASKS.GROUND,
         userData: { color: '#888888' }
     });
-    
-    bodies['ground'] = groundBody;
 
-    // Create frame as a rigid body
-    const frameBody = world.createBody({
-        type: 'dynamic',
-        position: Vec2(0, -1), 
-        linearDamping: 0.1,
-        angularDamping: 0.1
-    });
-
-    // Convert frame vertices to Planck.js format (in meters)
-    const frameVertices = geometry.frameVertices.map(v => 
-        Vec2(v.x, v.y)
-    );
-    
+    // Create frame fixtures
+    const frameVertices = geometry.frameVertices.map(v => Vec2(v.x, v.y));
     const frameShape = Polygon(frameVertices);
     frameBody.createFixture(frameShape, {
         density: 1.0,
@@ -200,11 +247,7 @@ function createBodies(geometry, params, world) {
         userData: { color: '#4CAF50' }
     });
 
-    // Add top fork as a second fixture to the frame body
-    const forkTopVertices = geometry.forkTopVertices.map(v => 
-        Vec2(v.x, v.y)
-    );
-    
+    const forkTopVertices = geometry.forkTopVertices.map(v => Vec2(v.x, v.y));
     const forkTopShape = Polygon(forkTopVertices);
     frameBody.createFixture(forkTopShape, {
         density: 1.0,
@@ -214,21 +257,9 @@ function createBodies(geometry, params, world) {
         filterMaskBits: MASKS.FRAME,
         userData: { color: '#FF4444' }
     });
-    
-    bodies['frame'] = frameBody;
 
-    // Create bottom fork tube as a separate dynamic body
-    const bottomForkBody = world.createBody({
-        type: 'dynamic',
-        position: Vec2(0, -1),
-        linearDamping: 0.1,
-        angularDamping: 0.1
-    });
-
-    const forkBottomVertices = geometry.forkBottomVertices.map(v => 
-        Vec2(v.x, v.y)
-    );
-
+    // Create bottom fork fixture
+    const forkBottomVertices = geometry.forkBottomVertices.map(v => Vec2(v.x, v.y));
     const forkBottomShape = Polygon(forkBottomVertices);
     bottomForkBody.createFixture(forkBottomShape, {
         density: 1.0,
@@ -239,9 +270,12 @@ function createBodies(geometry, params, world) {
         userData: { color: '#FF8888' }
     });
 
-    bodies['bottomFork'] = bottomForkBody;
+    // Clear existing joints
+    for (let joint = world.getJointList(); joint; joint = joint.getNext()) {
+        world.destroyJoint(joint);
+    }
 
-    // Create prismatic joint to constrain motion along the fork axis
+    // Create prismatic joint
     const forkAxis = Vec2(0, 1); // Vertical axis
     const anchor = Vec2(geometry.headTubeBottom.x, geometry.headTubeBottom.y);
     
@@ -254,90 +288,17 @@ function createBodies(geometry, params, world) {
     
     world.createJoint(prismaticJoint);
 
-    // Create distance joint to act as a spring
-    // Position the bottom fork tube so its top aligns with the bottom of the top tube
+    // Create distance joint
     const topAnchor = Vec2(geometry.headTubeBottom.x, geometry.headTubeBottom.y);
     const bottomAnchor = Vec2(geometry.headTubeBottom.x, geometry.headTubeBottom.y - params.frame.bottomForkTubeLength.value);
     
     const distanceJoint = DistanceJoint({
         frequencyHz: params.simulation.forkSpringFrequency.value,
         dampingRatio: params.simulation.forkSpringDamping.value,
-        length: params.frame.bottomForkTubeLength.value // Rest length matches the fork tube length
+        length: params.frame.bottomForkTubeLength.value 
     }, frameBody, bottomForkBody, topAnchor, bottomAnchor);
     
     world.createJoint(distanceJoint);
-
-    return bodies;
-}
-
-// Function to update motorcycle geometry without recreating bodies
-function updateBodies(params, worldBodies) {
-    if (!worldBodies.frame) return;
-
-    const geometry = generateGeometry(params.frame, params.simulation);
-
-    // Update frame vertices
-    const frameBody = worldBodies.frame;
-    const bottomForkBody = worldBodies.bottomFork;
-    
-    // Get the list of fixtures
-    const frameFixtures = [];
-    for (let fixture = frameBody.getFixtureList(); fixture; fixture = fixture.getNext()) {
-        frameFixtures.push(fixture);
-    }
-    
-    // Destroy all fixtures
-    frameFixtures.forEach(fixture => frameBody.destroyFixture(fixture));
-
-    // Create new frame fixture
-    const frameVertices = geometry.frameVertices.map(v => 
-        Vec2(v.x, v.y)
-    );
-    const frameShape = Polygon(frameVertices);
-    frameBody.createFixture(frameShape, {
-        density: 1.0,
-        friction: 0.3,
-        restitution: 0.2,
-        filterCategoryBits: CATEGORIES.FRAME,
-        filterMaskBits: MASKS.FRAME,
-        userData: { color: '#4CAF50' }
-    });
-
-    // Create new fork fixture
-    const forkTopVertices = geometry.forkTopVertices.map(v => 
-        Vec2(v.x, v.y)
-    );
-    const forkTopShape = Polygon(forkTopVertices);
-    frameBody.createFixture(forkTopShape, {
-        density: 1.0,
-        friction: 0.3,
-        restitution: 0.2,
-        filterCategoryBits: CATEGORIES.FRAME,
-        filterMaskBits: MASKS.FRAME,
-        userData: { color: '#FF4444' }
-    });
-
-    // Update bottom fork tube
-    if (bottomForkBody) {
-        const bottomForkFixtures = [];
-        for (let fixture = bottomForkBody.getFixtureList(); fixture; fixture = fixture.getNext()) {
-            bottomForkFixtures.push(fixture);
-        }
-        bottomForkFixtures.forEach(fixture => bottomForkBody.destroyFixture(fixture));
-
-        const forkBottomVertices = geometry.forkBottomVertices.map(v => 
-            Vec2(v.x, v.y)
-        );
-        const forkBottomShape = Polygon(forkBottomVertices);
-        bottomForkBody.createFixture(forkBottomShape, {
-            density: 1.0,
-            friction: 0.3,
-            restitution: 0.2,
-            filterCategoryBits: CATEGORIES.FORK,
-            filterMaskBits: MASKS.FORK,
-            userData: { color: '#FF8888' }
-        });
-    }
 }
 
 // Function to create the world and motorcycle
@@ -352,6 +313,7 @@ function createWorld(params, world, render, worldBodies) {
         delete worldBodies[key];
     });
 
+    // Generate geometry from params
     const geometry = generateGeometry(params.frame, params.simulation);
     const newBodies = createBodies(geometry, params, world);
     
@@ -359,4 +321,4 @@ function createWorld(params, world, render, worldBodies) {
     Object.assign(worldBodies, newBodies);
 }
 
-export { initPhysics, createWorld, updateBodies, CATEGORIES, MASKS }; 
+export { initPhysics, createWorld, updateBodies, CATEGORIES, MASKS, transformVec2 }; 

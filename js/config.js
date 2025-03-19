@@ -41,7 +41,7 @@ export const defaultParams = {
         },
         forkSpringFrequency: {
             displayName: "Fork Spring Frequency",
-            value: 4.0,
+            value: 10.0,
             unit: "Hz"
         },
         forkSpringDamping: {

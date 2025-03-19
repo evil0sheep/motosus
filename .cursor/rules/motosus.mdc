@@ -1,8 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
-Always use ES imports
 Please use `npm test` to verify changes
 

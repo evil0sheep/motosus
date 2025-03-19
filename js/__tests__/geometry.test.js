@@ -1,6 +1,7 @@
 import { triangleVertices, triangleCentroid, generateGeometry, triangleVerticesNamed } from '../geometry.js';
 import { distance, transformPoints } from '../geometry.js';
 import { scale, rotate, translate, compose } from 'transformation-matrix';
+import { defaultParams } from '../config.js';
 
 describe('geometry.js', () => {
     describe('basic geometry functions', () => {
@@ -86,35 +87,12 @@ describe('geometry.js', () => {
     describe('generateGeometry', () => {
         test('should handle valid parameters', () => {
             expect(() => {
-                const frameParams = {
-                    headTubeLength: {
-                        value: 100,
-                        displayName: "Head Tube Length"
-                    },
-                    swingArmPivotToHeadTubeTopCenter: {
-                        value: 500,
-                        displayName: "Swing Arm Pivot to Head Tube Top"
-                    },
-                    swingArmPivotToHeadTubeBottomCenter: {
-                        value: 500,
-                        displayName: "Swing Arm Pivot to Head Tube Bottom"
-                    },
-                    topForkTubeLength: {
-                        value: 300,
-                        displayName: "Top Fork Tube Length"
-                    }
-                };
-
-                const simulationParams = {
-                    groundWidth: { value: 2000 },
-                    groundHeight: { value: 100 }
-                };
-
-                const geometry = generateGeometry(frameParams, simulationParams);
+                const geometry = generateGeometry(defaultParams.frame, defaultParams.simulation);
                 
                 // Check that all required properties exist
                 expect(geometry).toHaveProperty('frameVertices');
                 expect(geometry).toHaveProperty('forkTopVertices');
+                expect(geometry).toHaveProperty('forkBottomVertices');
                 expect(geometry).toHaveProperty('swingArmPivot');
                 expect(geometry).toHaveProperty('headTubeBottom');
                 expect(geometry).toHaveProperty('headTubeTop');
