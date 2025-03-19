@@ -1,4 +1,4 @@
-import { World, Vec2, Box, Polygon, PrismaticJoint, DistanceJoint, MouseJoint } from 'planck';
+import { World, Vec2, Box, Polygon, Circle, PrismaticJoint, DistanceJoint, MouseJoint, RevoluteJoint } from 'planck';
 import { generateGeometry } from './geometry.js';
 import { applyToPoint } from 'transformation-matrix';
 
@@ -10,23 +10,23 @@ function transformVec2(vec2, matrix) {
 
 // Collision categories and masks
 const CATEGORIES = {
-    FRAME: 0x0001,
+    FRAME: 0x0001,  // Includes frame, fork, and swingarm
     GROUND: 0x0002,
-    FORK: 0x0004,
+    WHEEL: 0x0004
 };
 
 const MASKS = {
     NONE: 0x0000,
-    FRAME: 0x0002,  // Frame collides with ground
-    GROUND: 0x0001 | 0x0004,  // Ground collides with frame and fork
-    FORK: 0x0002  // Fork collides with ground
+    FRAME: 0x0002,  // Frame (including fork and swingarm) collides with ground
+    GROUND: 0x0001 | 0x0004,  // Ground collides with frame and wheels
+    WHEEL: 0x0002  // Wheels collide with ground only
 };
 
 // Function to initialize Planck.js physics engine and renderer
 function initPhysics(canvasContainer, canvasSize) {
     // Initialize Planck.js world
     const world = World({
-        gravity: Vec2(0, 9.81) 
+        gravity: Vec2(0, 0)  // Default gravity off
     });
 
     // Create canvas and context
@@ -39,6 +39,7 @@ function initPhysics(canvasContainer, canvasSize) {
     // Create a static body for the mouse joint
     const mouseBody = world.createBody();
     let mouseJoint = null;
+    let isRunning = false;  // Add simulation control flag
 
     // Handle window resize
     window.addEventListener('resize', () => {
@@ -102,13 +103,20 @@ function initPhysics(canvasContainer, canvasSize) {
     // Start the simulation loop
     let animationFrameId;
     function step() {
-        world.step(1/60); // 60 FPS
+        if (isRunning) {
+            world.step(1/60); // Only step physics if simulation is running
+        }
         draw(ctx, world);
         animationFrameId = requestAnimationFrame(step);
     }
     step();
 
-    return { world, canvas, ctx };
+    return { 
+        world, 
+        canvas, 
+        ctx,
+        setRunning: (running) => { isRunning = running; }  // Add control function
+    };
 }
 
 // Function to draw the world
@@ -117,7 +125,7 @@ function draw(ctx, world) {
     
     // Center the viewport
     ctx.save();
-    ctx.translate(ctx.canvas.width / 2 , ctx.canvas.height );
+    ctx.translate(ctx.canvas.width / 2 , ctx.canvas.height / 2);
     ctx.scale(400, 400);  // Scale up for visibility (1 meter = 400 pixels)
     
     // Draw all bodies
@@ -136,7 +144,27 @@ function draw(ctx, world) {
             
             ctx.beginPath();
             if (shape.getType() === 'circle') {
+                // Draw wheel rim
                 ctx.arc(0, 0, shape.getRadius(), 0, 2 * Math.PI);
+                ctx.strokeStyle = userData.color || '#4CAF50';
+                ctx.lineWidth = 0.005;
+                ctx.stroke();
+                
+                // Draw spokes
+                const numSpokes = 8;
+                const radius = shape.getRadius();
+                ctx.beginPath();
+                for (let i = 0; i < numSpokes; i++) {
+                    const angle = (i * 2 * Math.PI) / numSpokes;
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(
+                        radius * Math.cos(angle),
+                        radius * Math.sin(angle)
+                    );
+                }
+                ctx.strokeStyle = '#666666';
+                ctx.lineWidth = 0.003;
+                ctx.stroke();
             } else if (shape.getType() === 'polygon') {
                 const vertices = shape.m_vertices;
                 ctx.moveTo(vertices[0].x, vertices[0].y);
@@ -144,11 +172,10 @@ function draw(ctx, world) {
                     ctx.lineTo(vertices[i].x, vertices[i].y);
                 }
                 ctx.closePath();
+                ctx.strokeStyle = userData.color || '#4CAF50';
+                ctx.lineWidth = 0.005;
+                ctx.stroke();
             }
-            
-            ctx.strokeStyle = userData.color || '#4CAF50';
-            ctx.lineWidth = 0.005; // Slightly thicker lines for better visibility
-            ctx.stroke();
         }
         
         ctx.restore();
@@ -229,21 +256,68 @@ function createBodies(geometry, params, world) {
     // Create ground
     bodies['ground'] = world.createBody({
         type: 'static',
-        position: Vec2(0, 0)
+        position: Vec2(0, 1)
     });
 
-    // Create frame as a rigid body
+    // Create frame as a rigid body at swingarm pivot
     bodies['frame'] = world.createBody({
         type: 'dynamic',
-        position: Vec2(0, -1), 
+        position: Vec2(geometry.swingArmPivot.x, geometry.swingArmPivot.y),
         linearDamping: 0.1,
         angularDamping: 0.1
     });
 
-    // Create bottom fork tube as a separate dynamic body
+    // Calculate fork angle and position
+    const forkAxis = Vec2(
+        geometry.headTubeTop.x - geometry.headTubeBottom.x,
+        geometry.headTubeTop.y - geometry.headTubeBottom.y
+    );
+    forkAxis.normalize();
+    const forkAngle = Math.atan2(forkAxis.y, forkAxis.x) - Math.PI/2;
+    const forkLength = params.frame.bottomForkTubeLength.value + params.frame.topForkTubeLength.value;
+    const forkCenter = Vec2(
+        geometry.headTubeBottom.x - forkAxis.x * forkLength/2,
+        geometry.headTubeBottom.y - forkAxis.y * forkLength/2
+    );
+
+    // Create bottom fork tube as a separate dynamic body, centered on itself
     bodies['bottomFork'] = world.createBody({
         type: 'dynamic',
-        position: Vec2(0, -1),
+        position: forkCenter,
+        angle: forkAngle,
+        linearDamping: 0.1,
+        angularDamping: 0.1
+    });
+
+    // Create front wheel at the end of the fork
+    const frontWheelPos = Vec2(
+        geometry.headTubeBottom.x - forkAxis.x * forkLength,
+        geometry.headTubeBottom.y - forkAxis.y * forkLength
+    );
+    bodies['frontWheel'] = world.createBody({
+        type: 'dynamic',
+        position: frontWheelPos,
+        linearDamping: 0.1,
+        angularDamping: 0.1
+    });
+
+    // Create swingarm as a dynamic body, with origin at pivot point
+    bodies['swingarm'] = world.createBody({
+        type: 'dynamic',
+        position: Vec2(0, 0),
+        linearDamping: 0.1,
+        angularDamping: 0.1,
+        angle: 0  // Initialize horizontal
+    });
+
+    // Create rear wheel at end of swingarm
+    const rearWheelPos = Vec2(
+        params.frame.swingarmLength.value,
+       0
+    );
+    bodies['rearWheel'] = world.createBody({
+        type: 'dynamic',
+        position: rearWheelPos,
         linearDamping: 0.1,
         angularDamping: 0.1
     });
@@ -261,30 +335,20 @@ function updateBodies(params, worldBodies, world) {
     const geometry = generateGeometry(params.frame, params.simulation);
     const frameBody = worldBodies.frame;
     const bottomForkBody = worldBodies.bottomFork;
+    const frontWheelBody = worldBodies.frontWheel;
+    const swingarmBody = worldBodies.swingarm;
+    const rearWheelBody = worldBodies.rearWheel;
     const groundBody = worldBodies.ground;
     
-    // Clear existing fixtures from frame
-    const frameFixtures = [];
-    for (let fixture = frameBody.getFixtureList(); fixture; fixture = fixture.getNext()) {
-        frameFixtures.push(fixture);
-    }
-    frameFixtures.forEach(fixture => frameBody.destroyFixture(fixture));
-
-    // Clear existing fixtures from bottom fork
-    if (bottomForkBody) {
-        const bottomForkFixtures = [];
-        for (let fixture = bottomForkBody.getFixtureList(); fixture; fixture = fixture.getNext()) {
-            bottomForkFixtures.push(fixture);
+    // Clear all existing fixtures
+    [frameBody, bottomForkBody, frontWheelBody, swingarmBody, rearWheelBody, groundBody].forEach(body => {
+        if (!body) return;
+        const fixtures = [];
+        for (let fixture = body.getFixtureList(); fixture; fixture = fixture.getNext()) {
+            fixtures.push(fixture);
         }
-        bottomForkFixtures.forEach(fixture => bottomForkBody.destroyFixture(fixture));
-    }
-
-    // Clear existing fixtures from ground
-    const groundFixtures = [];
-    for (let fixture = groundBody.getFixtureList(); fixture; fixture = fixture.getNext()) {
-        groundFixtures.push(fixture);
-    }
-    groundFixtures.forEach(fixture => groundBody.destroyFixture(fixture));
+        fixtures.forEach(fixture => body.destroyFixture(fixture));
+    });
 
     // Create ground fixture
     const groundShape = Box(
@@ -292,7 +356,7 @@ function updateBodies(params, worldBodies, world) {
         params.simulation.groundHeight.value / 2
     );
     groundBody.createFixture(groundShape, {
-        density: 1.0,
+        density: params.simulation.density.value,
         friction: 0.3,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.GROUND,
@@ -300,11 +364,14 @@ function updateBodies(params, worldBodies, world) {
         userData: { color: '#333333' }
     });
 
-    // Create frame fixtures
-    const frameVertices = geometry.frameVertices.map(v => Vec2(v.x, v.y));
+    // Create frame fixtures in local coordinates (relative to swingarm pivot)
+    const frameVertices = geometry.frameVertices.map(v => Vec2(
+        v.x - geometry.swingArmPivot.x,
+        v.y - geometry.swingArmPivot.y
+    ));
     const frameShape = Polygon(frameVertices);
     frameBody.createFixture(frameShape, {
-        density: 1.0,
+        density: params.simulation.density.value,
         friction: 0.3,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FRAME,
@@ -312,10 +379,13 @@ function updateBodies(params, worldBodies, world) {
         userData: { color: '#333333' }
     });
 
-    const forkTopVertices = geometry.forkTopVertices.map(v => Vec2(v.x, v.y));
+    const forkTopVertices = geometry.forkTopVertices.map(v => Vec2(
+        v.x - geometry.swingArmPivot.x,
+        v.y - geometry.swingArmPivot.y
+    ));
     const forkTopShape = Polygon(forkTopVertices);
     frameBody.createFixture(forkTopShape, {
-        density: 1.0,
+        density: params.simulation.density.value,
         friction: 0.3,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FRAME,
@@ -323,15 +393,67 @@ function updateBodies(params, worldBodies, world) {
         userData: { color: '#333333' }
     });
 
-    // Create bottom fork fixture
-    const forkBottomVertices = geometry.forkBottomVertices.map(v => Vec2(v.x, v.y));
+    // Calculate fork dimensions
+    const forkLength = params.frame.bottomForkTubeLength.value + params.frame.topForkTubeLength.value;
+    const forkWidth = forkLength * 0.1; // Width is 10% of length
+
+    // Create bottom fork fixture centered at origin
+    const forkBottomVertices = [
+        Vec2(-forkWidth/2, -forkLength/2),
+        Vec2(forkWidth/2, -forkLength/2),
+        Vec2(forkWidth/2, forkLength/2),
+        Vec2(-forkWidth/2, forkLength/2)
+    ];
     const forkBottomShape = Polygon(forkBottomVertices);
     bottomForkBody.createFixture(forkBottomShape, {
-        density: 1.0,
+        density: params.simulation.density.value,
         friction: 0.3,
         restitution: 0.2,
-        filterCategoryBits: CATEGORIES.FORK,
-        filterMaskBits: MASKS.FORK,
+        filterCategoryBits: CATEGORIES.FRAME,
+        filterMaskBits: MASKS.FRAME,
+        userData: { color: '#333333' }
+    });
+
+    // Create front wheel fixture centered at origin
+    const wheelRadius = params.frame.frontWheelDiameter.value / 2;
+    const wheelShape = Circle(wheelRadius);
+    frontWheelBody.createFixture(wheelShape, {
+        density: params.simulation.density.value,
+        friction: 0.7,
+        restitution: 0.2,
+        filterCategoryBits: CATEGORIES.WHEEL,
+        filterMaskBits: MASKS.WHEEL,
+        userData: { color: '#333333' }
+    });
+
+    // Create swingarm fixture centered at pivot
+    const swingarmLength = params.frame.swingarmLength.value;
+    const swingarmWidth = swingarmLength * 0.1;
+    const swingarmVertices = [
+        Vec2(0, swingarmWidth/2),
+        Vec2(swingarmLength, swingarmWidth/2),
+        Vec2(swingarmLength, -swingarmWidth/2),
+        Vec2(0, -swingarmWidth/2)
+    ];
+    const swingarmShape = Polygon(swingarmVertices);
+    swingarmBody.createFixture(swingarmShape, {
+        density: params.simulation.density.value,
+        friction: 0.3,
+        restitution: 0.2,
+        filterCategoryBits: CATEGORIES.FRAME,
+        filterMaskBits: MASKS.FRAME,
+        userData: { color: '#333333' }
+    });
+
+    // Create rear wheel fixture centered at origin
+    const rearWheelRadius = params.frame.rearWheelDiameter.value / 2;
+    const rearWheelShape = Circle(rearWheelRadius);
+    rearWheelBody.createFixture(rearWheelShape, {
+        density: params.simulation.density.value,
+        friction: 0.7,
+        restitution: 0.2,
+        filterCategoryBits: CATEGORIES.WHEEL,
+        filterMaskBits: MASKS.WHEEL,
         userData: { color: '#333333' }
     });
 
@@ -340,39 +462,32 @@ function updateBodies(params, worldBodies, world) {
         world.destroyJoint(joint);
     }
 
-    // Create prismatic joint
-    const forkAxis = Vec2(geometry.headTubeTop.x - geometry.headTubeBottom.x, geometry.headTubeTop.y - geometry.headTubeBottom.y); 
+    // Calculate fork axis for joints
+    const forkAxis = Vec2(
+        geometry.headTubeTop.x - geometry.headTubeBottom.x,
+        geometry.headTubeTop.y - geometry.headTubeBottom.y
+    );
     forkAxis.normalize();
+
+    // Create prismatic joint for fork in local coordinates
+    const headTubeBottomLocal = Vec2(
+        geometry.headTubeBottom.x - geometry.swingArmPivot.x,
+        geometry.headTubeBottom.y - geometry.swingArmPivot.y
+    );
     
-    // Use geometry points directly as local anchors since they're already in local space
-    const localAnchorA = Vec2(geometry.headTubeBottom.x, geometry.headTubeBottom.y);
-    const localAnchorB = Vec2(geometry.headTubeBottom.x, geometry.headTubeBottom.y);
-    
-    const forkTravel = 0.15;
     const prismaticJoint = PrismaticJoint({
         enableLimit: true,
-        lowerTranslation: 0, 
-        upperTranslation: forkTravel,  
+        lowerTranslation: 0,
+        upperTranslation: 0.15,
         enableMotor: false,
-        localAxisA: forkAxis, // Specify the axis in local coordinates
-        localAnchorA: localAnchorA,
-        localAnchorB: localAnchorB
+        localAxisA: forkAxis,
+        localAnchorA: headTubeBottomLocal,
+        localAnchorB: Vec2(0, forkLength/2) // Top of fork tube
     }, frameBody, bottomForkBody);
     
     world.createJoint(prismaticJoint);
 
-    // Create distance joint (spring)
-    // Frame anchor at head tube bottom in local coordinates
-    const springLocalAnchorA = localAnchorA.clone();
-    
-    // Fork anchor at bottom of lower fork tube, following fork angle
-    const springLength = params.frame.bottomForkTubeLength.value + params.frame.topForkTubeLength.value - params.frame.headTubeLength.value;
-    const springLocalAnchorB = Vec2(
-        geometry.headTubeBottom.x - forkAxis.x * springLength,
-        geometry.headTubeBottom.y - forkAxis.y * springLength
-    );
-    
-    // Calculate spring length based on tube lengths
+    // Create fork spring (distance joint)
     const springRestLength = params.frame.topForkTubeLength.value + 
                            params.frame.bottomForkTubeLength.value - 
                            params.frame.headTubeLength.value;
@@ -381,11 +496,44 @@ function updateBodies(params, worldBodies, world) {
         frequencyHz: params.simulation.forkSpringFrequency.value,
         dampingRatio: params.simulation.forkSpringDamping.value,
         length: springRestLength,
-        localAnchorA: springLocalAnchorA,
-        localAnchorB: springLocalAnchorB
+        localAnchorA: headTubeBottomLocal,
+        localAnchorB: Vec2(0, -forkLength/2) // Bottom of fork tube
     }, frameBody, bottomForkBody);
     
     world.createJoint(distanceJoint);
+
+    // Create front wheel revolute joint
+    const wheelJoint = RevoluteJoint({
+        enableMotor: false,
+        maxMotorTorque: 0,
+        motorSpeed: 0,
+        localAnchorA: Vec2(0, -forkLength/2), // Bottom of fork
+        localAnchorB: Vec2(0, 0) // Center of wheel
+    }, bottomForkBody, frontWheelBody);
+
+    world.createJoint(wheelJoint);
+
+    // Create swingarm pivot joint
+    const swingarmPivotJoint = RevoluteJoint({
+        enableMotor: false,
+        maxMotorTorque: 0,
+        motorSpeed: 0,
+        localAnchorA: Vec2(0, 0), // At swingarm pivot (frame origin)
+        localAnchorB: Vec2(0, 0) // At swingarm origin
+    }, frameBody, swingarmBody);
+    
+    world.createJoint(swingarmPivotJoint);
+
+    // Create rear wheel joint
+    const rearWheelJoint = RevoluteJoint({
+        enableMotor: false,
+        maxMotorTorque: 0,
+        motorSpeed: 0,
+        localAnchorA: Vec2(swingarmLength, 0), // End of swingarm
+        localAnchorB: Vec2(0, 0) // Center of wheel
+    }, swingarmBody, rearWheelBody);
+
+    world.createJoint(rearWheelJoint);
 }
 
 // Function to create the world and motorcycle

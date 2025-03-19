@@ -17,8 +17,53 @@ let worldBodies = {};
 
 // Initialize when DOM is loaded
 window.addEventListener('load', () => {
+    // Get controls container
+    const controls = document.getElementById('controls');
+
     // Initialize physics engine and get Planck.js objects
-    const { world, canvas, ctx } = initPhysics(document.getElementById('canvas-container'), canvasSize);
+    const { world, canvas, ctx, setRunning } = initPhysics(document.getElementById('canvas-container'), canvasSize);
+
+    // Create control buttons container
+    const controlButtonsContainer = document.createElement('div');
+    controlButtonsContainer.style.display = 'flex';
+    controlButtonsContainer.style.alignItems = 'center';
+    controlButtonsContainer.style.gap = '10px';
+    controlButtonsContainer.style.marginBottom = '20px';
+
+    // Create simulation toggle
+    const simulationContainer = document.createElement('div');
+    simulationContainer.style.display = 'flex';
+    simulationContainer.style.alignItems = 'center';
+    simulationContainer.style.gap = '10px';
+
+    const simulationCheckbox = document.createElement('input');
+    simulationCheckbox.type = 'checkbox';
+    simulationCheckbox.id = 'simulationToggle';
+    simulationCheckbox.checked = false; // Simulation off by default
+
+    const simulationLabel = document.createElement('label');
+    simulationLabel.htmlFor = 'simulationToggle';
+    simulationLabel.textContent = 'Run Simulation';
+    simulationLabel.style.color = '#666';
+
+    simulationContainer.appendChild(simulationCheckbox);
+    simulationContainer.appendChild(simulationLabel);
+
+    // Add reset button to container
+    const resetButton = document.createElement('button');
+    resetButton.id = 'resetButton';
+    resetButton.textContent = 'Reset';
+    resetButton.style.padding = '5px 10px';
+
+    controlButtonsContainer.appendChild(simulationContainer);
+    controlButtonsContainer.appendChild(resetButton);
+
+    controls.insertBefore(controlButtonsContainer, document.getElementById('sliders-container'));
+
+    // Handle simulation toggle
+    simulationCheckbox.addEventListener('change', (e) => {
+        setRunning(e.target.checked);
+    });
 
     // Add build timestamp to UI
     const timestampDiv = document.createElement('div');
@@ -59,7 +104,7 @@ window.addEventListener('load', () => {
     const gravityCheckbox = document.createElement('input');
     gravityCheckbox.type = 'checkbox';
     gravityCheckbox.id = 'gravityToggle';
-    gravityCheckbox.checked = true; // Gravity on by default
+    gravityCheckbox.checked = false; // Gravity off by default
 
     const gravityLabel = document.createElement('label');
     gravityLabel.htmlFor = 'gravityToggle';
@@ -69,7 +114,6 @@ window.addEventListener('load', () => {
     gravityContainer.appendChild(gravityCheckbox);
     gravityContainer.appendChild(gravityLabel);
 
-    const controls = document.getElementById('controls');
     controls.insertBefore(gravityContainer, document.getElementById('sliders-container'));
 
     // Handle gravity toggle

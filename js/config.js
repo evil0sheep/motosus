@@ -26,6 +26,21 @@ export const defaultParams = {
             displayName: "Bottom Fork Tube Length",
             value: 0.2,  
             unit: "m"
+        },
+        frontWheelDiameter: {
+            displayName: "Front Wheel Diameter",
+            value: 0.5,  // 500mm diameter
+            unit: "m"
+        },
+        swingarmLength: {
+            displayName: "Swingarm Length",
+            value: 0.5,  // 500mm length
+            unit: "m"
+        },
+        rearWheelDiameter: {
+            displayName: "Rear Wheel Diameter",
+            value: 0.5,  // 500mm diameter
+            unit: "m"
         }
     },
     simulation: {
@@ -48,6 +63,11 @@ export const defaultParams = {
             displayName: "Fork Spring Damping",
             value: 1,
             unit: ""
+        },
+        density: {
+            displayName: "Component Density",
+            value: 0.01,
+            unit: "kg/m³"
         }
     }
 }; 
