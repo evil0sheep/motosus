@@ -16,7 +16,7 @@ const MASKS = {
 function initPhysics(planck, canvasContainer, canvasSize) {
     // Initialize Planck.js world
     const world = planck.World({
-        gravity: planck.Vec2(0, 10) // Planck.js uses m/s², so we'll use 10 instead of 1
+        gravity: planck.Vec2(0, 9.81) 
     });
 
     // Create canvas and context
@@ -51,7 +51,7 @@ function draw(ctx, world) {
     // Center the viewport
     ctx.save();
     ctx.translate(ctx.canvas.width / 2 , ctx.canvas.height );
-    ctx.scale(0.5, 0.5);
+    ctx.scale(400, 400);  // Scale up for visibility (1 meter = 400 pixels)
     
     // Draw all bodies
     for (let body = world.getBodyList(); body; body = body.getNext()) {
@@ -59,7 +59,7 @@ function draw(ctx, world) {
         const angle = body.getAngle();
         
         ctx.save();
-        ctx.translate(pos.x * 100, pos.y * 100); // Scale up for visibility
+        ctx.translate(pos.x, pos.y); // No scaling needed
         ctx.rotate(angle);
         
         // Draw fixtures
@@ -69,12 +69,12 @@ function draw(ctx, world) {
             
             ctx.beginPath();
             if (shape.getType() === 'circle') {
-                ctx.arc(0, 0, shape.getRadius() * 100, 0, 2 * Math.PI);
+                ctx.arc(0, 0, shape.getRadius(), 0, 2 * Math.PI);
             } else if (shape.getType() === 'polygon') {
                 const vertices = shape.m_vertices;
-                ctx.moveTo(vertices[0].x * 100, vertices[0].y * 100);
+                ctx.moveTo(vertices[0].x, vertices[0].y);
                 for (let i = 1; i < vertices.length; i++) {
-                    ctx.lineTo(vertices[i].x * 100, vertices[i].y * 100);
+                    ctx.lineTo(vertices[i].x, vertices[i].y);
                 }
                 ctx.closePath();
             }
@@ -82,6 +82,7 @@ function draw(ctx, world) {
             ctx.fillStyle = userData.color || '#4CAF50';
             ctx.fill();
             ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 0.002;
             ctx.stroke();
         }
         
@@ -102,8 +103,8 @@ function createBodies(geometry, params, planck, world) {
     });
     
     const groundShape = planck.Box(
-        params.simulation.groundWidth.value / 200, // Convert to meters
-        params.simulation.groundHeight.value / 200
+        params.simulation.groundWidth.value / 2, // Half width in meters
+        params.simulation.groundHeight.value / 2  // Half height in meters
     );
     
     groundBody.createFixture(groundShape, {
@@ -120,14 +121,14 @@ function createBodies(geometry, params, planck, world) {
     // Create frame as a rigid body
     const frameBody = world.createBody({
         type: 'dynamic',
-        position: planck.Vec2(0, -5), // Start 5 meters up
+        position: planck.Vec2(0, -1), 
         linearDamping: 0.1,
         angularDamping: 0.1
     });
 
     // Convert frame vertices to Planck.js format (in meters)
     const frameVertices = geometry.frameVertices.map(v => 
-        planck.Vec2(v.x / 100, v.y / 100)
+        planck.Vec2(v.x, v.y)
     );
     
     const frameShape = planck.Polygon(frameVertices);
@@ -142,7 +143,7 @@ function createBodies(geometry, params, planck, world) {
 
     // Add fork as a second fixture to the frame body
     const forkTopVertices = geometry.forkTopVertices.map(v => 
-        planck.Vec2(v.x / 100, v.y / 100)
+        planck.Vec2(v.x, v.y)
     );
     
     const forkTopShape = planck.Polygon(forkTopVertices);
@@ -156,24 +157,6 @@ function createBodies(geometry, params, planck, world) {
     });
     
     bodies['frame'] = frameBody;
-
-    // Create origin marker
-    const originBody = world.createBody({
-        type: 'static',
-        position: planck.Vec2(0, 0)
-    });
-    
-    const originShape = planck.Circle(0.05); // 5cm radius
-    originBody.createFixture(originShape, {
-        density: 1.0,
-        friction: 0.3,
-        restitution: 0.2,
-        filterCategoryBits: CATEGORIES.FRAME,
-        filterMaskBits: MASKS.NONE,
-        userData: { color: '#FF0000' }
-    });
-    
-    bodies['originMarker'] = originBody;
 
     return bodies;
 }
@@ -198,7 +181,7 @@ function updateBodies(params, worldBodies, planck) {
 
     // Create new frame fixture
     const frameVertices = geometry.frameVertices.map(v => 
-        planck.Vec2(v.x / 100, v.y / 100)
+        planck.Vec2(v.x, v.y)
     );
     const frameShape = planck.Polygon(frameVertices);
     frameBody.createFixture(frameShape, {
@@ -212,7 +195,7 @@ function updateBodies(params, worldBodies, planck) {
 
     // Create new fork fixture
     const forkTopVertices = geometry.forkTopVertices.map(v => 
-        planck.Vec2(v.x / 100, v.y / 100)
+        planck.Vec2(v.x, v.y)
     );
     const forkTopShape = planck.Polygon(forkTopVertices);
     frameBody.createFixture(forkTopShape, {

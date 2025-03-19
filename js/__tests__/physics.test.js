@@ -47,7 +47,7 @@ describe('physics.js', () => {
 
             // Check world
             expect(world).toBeDefined();
-            expect(world.getGravity().y).toBe(10);
+            expect(world.getGravity().y).toBe(9.81);
 
             // Check canvas
             expect(canvas).toBeDefined();
@@ -73,7 +73,6 @@ describe('physics.js', () => {
             // Check that all required bodies exist
             expect(worldBodies.ground).toBeDefined();
             expect(worldBodies.frame).toBeDefined();
-            expect(worldBodies.originMarker).toBeDefined();
         });
 
         it('should set correct collision filters', () => {

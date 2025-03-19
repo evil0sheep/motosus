@@ -28,7 +28,7 @@ window.addEventListener('load', () => {
     const getCurrentParams = () => {
         const currentParams = JSON.parse(JSON.stringify(defaultParams));
         Object.keys(defaultParams.frame).forEach(key => {
-            currentParams.frame[key].value = parseInt(document.getElementById(key).value);
+            currentParams.frame[key].value = parseInt(document.getElementById(key).value)/1000;
         });
         return currentParams;
     };
@@ -39,6 +39,8 @@ window.addEventListener('load', () => {
     // Create UI controls
     const slidersContainer = document.getElementById('sliders-container');
     Object.entries(defaultParams.frame).forEach(([key, config]) => {
+        const value_mm = config.value * 1000;
+
         const container = document.createElement('div');
         container.className = 'slider-container';
         container.style.marginBottom = '15px';
@@ -66,7 +68,7 @@ window.addEventListener('load', () => {
         textInput.type = 'text';
         textInput.id = `${key}Text`;
         textInput.className = 'value-input';
-        textInput.value = config.value;
+        textInput.value = value_mm;
         textInput.style.width = '60px';
         textInput.style.textAlign = 'right';
         
@@ -82,9 +84,9 @@ window.addEventListener('load', () => {
         const slider = document.createElement('input');
         slider.type = 'range';
         slider.id = key;
-        slider.min = Math.round(config.value * 0.5); // 50% of default
-        slider.max = Math.round(config.value * 1.5); // 150% of default
-        slider.value = config.value;
+        slider.min = Math.round(value_mm * 0.5); // 50% of default
+        slider.max = Math.round(value_mm * 1.5); // 150% of default
+        slider.value = value_mm;
         slider.style.width = '100%';
         
         // Assemble the layout
