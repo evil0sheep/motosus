@@ -4,6 +4,7 @@
 import { initPhysics, createWorld, updateBodies } from './physics.js';
 import { defaultParams } from './config.js';
 
+
 // Constants
 const CANVAS_MARGIN = 50; // Margin from edges
 const canvasSize = {

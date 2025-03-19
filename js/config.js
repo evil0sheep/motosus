@@ -46,7 +46,7 @@ export const defaultParams = {
         },
         forkSpringDamping: {
             displayName: "Fork Spring Damping",
-            value: 0.7,
+            value: 1,
             unit: ""
         }
     }

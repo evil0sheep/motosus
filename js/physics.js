@@ -297,7 +297,7 @@ function updateBodies(params, worldBodies, world) {
     const distanceJoint = DistanceJoint({
         frequencyHz: params.simulation.forkSpringFrequency.value,
         dampingRatio: params.simulation.forkSpringDamping.value,
-        length: params.frame.bottomForkTubeLength.value 
+        length: params.frame.bottomForkTubeLength.value,
     }, frameBody, bottomForkBody, topAnchor, bottomAnchor);
     
     world.createJoint(distanceJoint);

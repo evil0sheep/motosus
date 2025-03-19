@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test": "webpack --mode=development --no-watch && node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "serve": "webpack serve",
-    "build": "webpack"
+    "build": "webpack --mode=production --no-watch",
+    "dev": "webpack serve"
   },
   "dependencies": {
     "planck": "^1.3.0",
