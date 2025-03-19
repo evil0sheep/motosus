@@ -120,7 +120,7 @@ function draw(ctx, world) {
         const angle = body.getAngle();
         
         ctx.save();
-        ctx.translate(pos.x, pos.y); // No scaling needed
+        ctx.translate(pos.x, pos.y);
         ctx.rotate(angle);
         
         // Draw fixtures
@@ -140,10 +140,8 @@ function draw(ctx, world) {
                 ctx.closePath();
             }
             
-            ctx.fillStyle = userData.color || '#4CAF50';
-            ctx.fill();
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 0.002;
+            ctx.strokeStyle = userData.color || '#4CAF50';
+            ctx.lineWidth = 0.005; // Slightly thicker lines for better visibility
             ctx.stroke();
         }
         
