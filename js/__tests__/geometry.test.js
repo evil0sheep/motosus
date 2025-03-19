@@ -119,9 +119,9 @@ describe('generateGeometry', () => {
                 value: 500,
                 displayName: "Swing Arm Pivot to Head Tube Bottom"
             },
-            frontForkLength: {
+            topForkTubeLength: {
                 value: 300,
-                displayName: "Front Fork Length"
+                displayName: "Top Fork Tube Length"
             }
         };
 
@@ -138,7 +138,7 @@ describe('generateGeometry', () => {
 
         // Check that all expected properties exist
         expect(geometry).toHaveProperty('frameVertices');
-        expect(geometry).toHaveProperty('forkVertices');
+        expect(geometry).toHaveProperty('forkTopVertices');
         expect(geometry).toHaveProperty('swingArmPivot');
         expect(geometry).toHaveProperty('headTubeBottom');
         expect(geometry).toHaveProperty('headTubeTop');
@@ -153,10 +153,10 @@ describe('generateGeometry', () => {
             expect(Number.isFinite(vertex.y)).toBe(true);
         });
 
-        // Check that forkVertices is an array of 4 points
-        expect(Array.isArray(geometry.forkVertices)).toBe(true);
-        expect(geometry.forkVertices).toHaveLength(4);
-        geometry.forkVertices.forEach(vertex => {
+        // Check that forkTopVertices is an array of 4 points
+        expect(Array.isArray(geometry.forkTopVertices)).toBe(true);
+        expect(geometry.forkTopVertices).toHaveLength(4);
+        geometry.forkTopVertices.forEach(vertex => {
             expect(Number.isFinite(vertex.x)).toBe(true);
             expect(Number.isFinite(vertex.y)).toBe(true);
         });

@@ -12,12 +12,12 @@ export const defaultParams = {
         },
         headTubeLength: {
             displayName: "Head Tube Length",
-            value: 200,
+            value: 100,
             unit: "mm"
         },
-        frontForkLength: {
-            displayName: "Front Fork Length",
-            value: 500,
+        topForkTubeLength: {
+            displayName: "Top Fork Tube Length",
+            value: 300,
             unit: "mm"
         }
     },

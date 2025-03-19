@@ -141,12 +141,12 @@ function createBodies(geometry, params, planck, world) {
     });
 
     // Add fork as a second fixture to the frame body
-    const forkVertices = geometry.forkVertices.map(v => 
+    const forkTopVertices = geometry.forkTopVertices.map(v => 
         planck.Vec2(v.x / 100, v.y / 100)
     );
     
-    const forkShape = planck.Polygon(forkVertices);
-    frameBody.createFixture(forkShape, {
+    const forkTopShape = planck.Polygon(forkTopVertices);
+    frameBody.createFixture(forkTopShape, {
         density: 1.0,
         friction: 0.3,
         restitution: 0.2,
@@ -211,11 +211,11 @@ function updateBodies(params, worldBodies, planck) {
     });
 
     // Create new fork fixture
-    const forkVertices = geometry.forkVertices.map(v => 
+    const forkTopVertices = geometry.forkTopVertices.map(v => 
         planck.Vec2(v.x / 100, v.y / 100)
     );
-    const forkShape = planck.Polygon(forkVertices);
-    frameBody.createFixture(forkShape, {
+    const forkTopShape = planck.Polygon(forkTopVertices);
+    frameBody.createFixture(forkTopShape, {
         density: 1.0,
         friction: 0.3,
         restitution: 0.2,

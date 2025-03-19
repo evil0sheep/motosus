@@ -68,9 +68,9 @@ export function generateGeometry(frameParams, simulationParams) {
     const frameCentroid = triangleCentroid(frameVertices);
 
     const forkWidth = 20;
-    const forkVertices = [
-        { x: -forkWidth/2, y: -frameParams.frontForkLength.value },
-        { x: forkWidth/2, y: -frameParams.frontForkLength.value },
+    const forkTopVertices = [
+        { x: -forkWidth/2, y: -frameParams.topForkTubeLength.value },
+        { x: forkWidth/2, y: -frameParams.topForkTubeLength.value },
         { x: forkWidth/2, y: 0 },
         { x: -forkWidth/2, y: 0 }
     ];
@@ -85,7 +85,7 @@ export function generateGeometry(frameParams, simulationParams) {
 
     return {
         frameVertices,
-        forkVertices,
+        forkTopVertices,
         swingArmPivot,
         headTubeBottom,
         headTubeTop,

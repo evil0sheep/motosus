@@ -110,25 +110,25 @@ describe('physics.js', () => {
             newParams.frame.swingArmPivotToHeadTubeTopCenter.value = 900;
             newParams.frame.swingArmPivotToHeadTubeBottomCenter.value = 900;
             newParams.frame.headTubeLength.value = 250;
-            newParams.frame.frontForkLength.value = 550;
+            newParams.frame.topForkTubeLength.value = 550;
 
             // Get initial vertices
             const frameFixture = worldBodies.frame.getFixtureList();
-            const forkFixture = frameFixture.getNext();
+            const forkTopFixture = frameFixture.getNext();
             const originalFrameShape = frameFixture.getShape();
-            const originalForkShape = forkFixture.getShape();
+            const originalForkTopShape = forkTopFixture.getShape();
 
             updateBodies(newParams, worldBodies, planck);
 
             // Get updated vertices
             const updatedFrameFixture = worldBodies.frame.getFixtureList();
-            const updatedForkFixture = updatedFrameFixture.getNext();
+            const updatedForkTopFixture = updatedFrameFixture.getNext();
             const updatedFrameShape = updatedFrameFixture.getShape();
-            const updatedForkShape = updatedForkFixture.getShape();
+            const updatedForkTopShape = updatedForkTopFixture.getShape();
 
             // Check that vertices have changed
             expect(updatedFrameShape.m_vertices).not.toEqual(originalFrameShape.m_vertices);
-            expect(updatedForkShape.m_vertices).not.toEqual(originalForkShape.m_vertices);
+            expect(updatedForkTopShape.m_vertices).not.toEqual(originalForkTopShape.m_vertices);
         });
     });
 }); 
