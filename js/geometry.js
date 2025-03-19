@@ -55,7 +55,7 @@ export function triangleVerticesNamed(sideA, sideB, sideC) {
                 invalidSide = sideC.displayName;
             }
             
-            throw new Error(`Invalid geometry: "${invalidSide}" (${sideA.value}mm) is too long to form a valid triangle with "${sideB.displayName}" (${sideB.value}mm) and "${sideC.displayName}" (${sideC.value}mm)`);
+            throw new Error(`Invalid geometry: "${invalidSide}" (${sideA.value}${sideA.unit}) is too long to form a valid triangle with "${sideB.displayName}" (${sideB.value}${sideB.unit}) and "${sideC.displayName}" (${sideC.value}${sideC.unit})`);
         }
         throw error; // Re-throw other errors
     }

@@ -74,7 +74,7 @@ window.addEventListener('load', () => {
         
         const unitSpan = document.createElement('span');
         unitSpan.className = 'unit-display';
-        unitSpan.textContent = config.unit;
+        unitSpan.textContent = 'mm';
         unitSpan.style.minWidth = '40px';
         
         // Bottom row container
