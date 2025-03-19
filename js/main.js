@@ -19,6 +19,18 @@ window.addEventListener('load', () => {
     // Initialize physics engine and get Planck.js objects
     const { world, canvas, ctx } = initPhysics(document.getElementById('canvas-container'), canvasSize);
 
+    // Add build timestamp to UI
+    const timestampDiv = document.createElement('div');
+    timestampDiv.style.position = 'fixed';
+    timestampDiv.style.bottom = '10px';
+    timestampDiv.style.left = '10px';
+    timestampDiv.style.fontSize = '12px';
+    timestampDiv.style.color = '#666';
+    timestampDiv.style.fontFamily = 'monospace';
+    const buildTime = new Date(BUILD_TIMESTAMP);
+    timestampDiv.textContent = `Build: ${buildTime.toLocaleString()}`;
+    document.body.appendChild(timestampDiv);
+
     // Create default frame parameters object
     const getDefaultParams = () => {
         return defaultParams;
