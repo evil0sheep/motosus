@@ -15,13 +15,6 @@ const CATEGORIES = {
     WHEEL: 0x0004
 };
 
-const MASKS = {
-    NONE: 0x0000,
-    FRAME: 0x0002,  // Frame (including fork and swingarm) collides with ground
-    GROUND: 0x0001 | 0x0004,  // Ground collides with frame and wheels
-    WHEEL: 0x0002  // Wheels collide with ground only
-};
-
 // Function to initialize Planck.js physics engine and renderer
 function initPhysics(canvasContainer, canvasSize) {
     // Initialize Planck.js world
@@ -294,7 +287,7 @@ function updateBodies(params, worldBodies, world) {
         friction: 0.3,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.GROUND,
-        filterMaskBits: MASKS.GROUND,
+        filterMaskBits: CATEGORIES.WHEEL | CATEGORIES.FRAME,
         userData: { color: '#333333' }
     });
 
@@ -339,7 +332,7 @@ function updateBodies(params, worldBodies, world) {
         friction: 0.3,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FRAME,
-        filterMaskBits: MASKS.FRAME,
+        filterMaskBits: CATEGORIES.GROUND,
         userData: { color: '#333333' }
     });
 
@@ -354,7 +347,7 @@ function updateBodies(params, worldBodies, world) {
         friction: 0.3,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FRAME,
-        filterMaskBits: MASKS.FRAME,
+        filterMaskBits: CATEGORIES.GROUND,
         userData: { color: '#666666' } // Slightly lighter color to distinguish it
     });
 
@@ -389,7 +382,7 @@ function updateBodies(params, worldBodies, world) {
         friction: 0.3,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FRAME,
-        filterMaskBits: MASKS.FRAME,
+        filterMaskBits: CATEGORIES.GROUND,
         userData: { color: '#4169E1' } // Royal Blue for top fork tube
     });
 
@@ -413,7 +406,7 @@ function updateBodies(params, worldBodies, world) {
         friction: 0.3,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FRAME,
-        filterMaskBits: MASKS.FRAME,
+        filterMaskBits: CATEGORIES.GROUND,
         userData: { color: '#3CB371' } // Medium Sea Green for bottom fork tube
     });
 
@@ -425,7 +418,7 @@ function updateBodies(params, worldBodies, world) {
         friction: 0.7,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.WHEEL,
-        filterMaskBits: MASKS.WHEEL,
+        filterMaskBits: CATEGORIES.GROUND,
         userData: { color: '#333333' }
     });
 
@@ -502,7 +495,7 @@ function updateBodies(params, worldBodies, world) {
         friction: 0.3,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FRAME,
-        filterMaskBits: MASKS.FRAME,
+        filterMaskBits: CATEGORIES.GROUND,
         userData: { color: '#333333' }
     });
 
@@ -514,7 +507,7 @@ function updateBodies(params, worldBodies, world) {
         friction: 0.7,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.WHEEL,
-        filterMaskBits: MASKS.WHEEL,
+        filterMaskBits: CATEGORIES.GROUND,
         userData: { color: '#333333' }
     });
 
@@ -607,4 +600,4 @@ function createWorld(params, world, render, worldBodies) {
     updateBodies(params, worldBodies, world);
 }
 
-export { initPhysics, createWorld, updateBodies, CATEGORIES, MASKS, transformVec2 }; 
+export { initPhysics, createWorld, updateBodies, CATEGORIES, transformVec2 }; 
