@@ -1,4 +1,5 @@
 import { scale, rotate, translate, compose, applyToPoint } from 'transformation-matrix';
+import { Vec2 } from 'planck';
 
 export function distance(p1, p2) {
     return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
@@ -6,7 +7,8 @@ export function distance(p1, p2) {
 
 export function transformPoints(points, matrix) {
     return points.map(p => {
-        return applyToPoint(matrix, { x: p.x, y: p.y });
+        const transformed = applyToPoint(matrix, { x: p.x, y: p.y });
+        return Vec2(transformed.x, transformed.y);
     });
 }
 
@@ -18,17 +20,17 @@ export function triangleVertices(a, b, c) {
     }
 
     // Place vertex C at the origin (0, 0).
-    const C = { x: 0, y: 0 };
+    const C = Vec2(0, 0);
   
     // Place vertex B at (c, 0).
-    const B = { x: -c, y: 0 };
+    const B = Vec2(-c, 0);
   
     // Use the law of cosines to find the angle at vertex C.
     const cosC = (a * a - b * b - c * c) / (-2 * b * c);
     const angleC = Math.acos(cosC);
   
     // Calculate the coordinates of vertex A using trigonometry.
-    const A = { x: -b * Math.cos(angleC), y: -b * Math.sin(angleC) };
+    const A = Vec2(-b * Math.cos(angleC), -b * Math.sin(angleC));
   
     return [C, B, A];
 }
@@ -64,7 +66,7 @@ export function triangleVerticesNamed(sideA, sideB, sideC) {
 export function triangleCentroid(vertices) {
     const x = (vertices[0].x + vertices[1].x + vertices[2].x) / 3;
     const y = (vertices[0].y + vertices[1].y + vertices[2].y) / 3;
-    return { x, y };
+    return Vec2(x, y);
 }
 
 export function triangleFromVerticesAndEdges(vertexA, vertexB, lengthA, lengthB) {
@@ -93,10 +95,8 @@ export function triangleFromVerticesAndEdges(vertexA, vertexB, lengthA, lengthB)
 
     // Calculate vertex C coordinates for clockwise winding
     // We subtract angleA from edgeAngle because we want clockwise winding
-    const vertexC = {
-        x: vertexA.x + lengthA * Math.cos(edgeAngle - angleA),
-        y: vertexA.y + lengthA * Math.sin(edgeAngle - angleA)
-    };
-
-    return vertexC;
+    return Vec2(
+        vertexA.x + lengthA * Math.cos(edgeAngle - angleA),
+        vertexA.y + lengthA * Math.sin(edgeAngle - angleA)
+    );
 } 
