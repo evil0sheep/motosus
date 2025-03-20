@@ -113,7 +113,7 @@ window.addEventListener('load', () => {
     const gravityCheckbox = document.createElement('input');
     gravityCheckbox.type = 'checkbox';
     gravityCheckbox.id = 'gravityToggle';
-    gravityCheckbox.checked = false; // Gravity off by default
+    gravityCheckbox.checked = true; // Gravity on by default to match physics.js
 
     const gravityLabel = document.createElement('label');
     gravityLabel.htmlFor = 'gravityToggle';

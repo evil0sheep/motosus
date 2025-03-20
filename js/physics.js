@@ -26,7 +26,7 @@ const MASKS = {
 function initPhysics(canvasContainer, canvasSize) {
     // Initialize Planck.js world
     const world = World({
-        gravity: Vec2(0, 0)  // Default gravity off
+        gravity: Vec2(0, 9.81)  // Enable gravity (positive y is downward)
     });
 
     // Create canvas and context
