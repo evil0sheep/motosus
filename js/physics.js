@@ -36,6 +36,11 @@ function initPhysics(canvasContainer, canvasSize) {
     canvasContainer.appendChild(canvas);
     const ctx = canvas.getContext('2d');
 
+    // Define viewport transform parameters
+    const viewportScale = 200; // Scale factor (1 meter = 200 pixels)
+    let viewportTranslateX = canvas.width / 2;
+    let viewportTranslateY = canvas.height / 2;
+
     // Create a static body for the mouse joint
     const mouseBody = world.createBody();
     let mouseJoint = null;
@@ -45,13 +50,17 @@ function initPhysics(canvasContainer, canvasSize) {
     window.addEventListener('resize', () => {
         canvas.width = canvasSize.width;
         canvas.height = canvasSize.height;
+        // Update viewport translation on resize
+        viewportTranslateX = canvas.width / 2;
+        viewportTranslateY = canvas.height / 2;
     });
 
     // Convert screen coordinates to physics world coordinates
     function getWorldPoint(e) {
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left - canvas.width / 2) / 400;
-        const y = (e.clientY - rect.top - canvas.height / 2) / 400; // Fixed: center y-coordinate
+        // Apply inverse viewport transform
+        const x = (e.clientX - rect.left - viewportTranslateX) / viewportScale;
+        const y = (e.clientY - rect.top - viewportTranslateY) / viewportScale;
         return Vec2(x, y);
     }
 
@@ -63,9 +72,10 @@ function initPhysics(canvasContainer, canvasSize) {
         
         // Query the world for bodies at the click position using AABB
         let clickedBody = null;
+        const clickRadius = 0.05 / viewportScale; // Scale click radius by viewport scale
         const aabb = {
-            lowerBound: Vec2(worldPoint.x - 0.05, worldPoint.y - 0.05), // Increased click radius
-            upperBound: Vec2(worldPoint.x + 0.05, worldPoint.y + 0.05)
+            lowerBound: Vec2(worldPoint.x - clickRadius, worldPoint.y - clickRadius),
+            upperBound: Vec2(worldPoint.x + clickRadius, worldPoint.y + clickRadius)
         };
 
         world.queryAABB(aabb, (fixture) => {
@@ -106,7 +116,7 @@ function initPhysics(canvasContainer, canvasSize) {
         if (isRunning) {
             world.step(1/60); // Only step physics if simulation is running
         }
-        draw(ctx, world);
+        draw(ctx, world, viewportScale, viewportTranslateX, viewportTranslateY);
         animationFrameId = requestAnimationFrame(step);
     }
     step();
@@ -120,13 +130,13 @@ function initPhysics(canvasContainer, canvasSize) {
 }
 
 // Function to draw the world
-function draw(ctx, world) {
+function draw(ctx, world, viewportScale, viewportTranslateX, viewportTranslateY) {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     
-    // Center the viewport
+    // Center the viewport using passed transform parameters
     ctx.save();
-    ctx.translate(ctx.canvas.width / 2 , ctx.canvas.height / 2);
-    ctx.scale(400, 400);  // Scale up for visibility (1 meter = 400 pixels)
+    ctx.translate(viewportTranslateX, viewportTranslateY);
+    ctx.scale(viewportScale, viewportScale);
     
     // Draw all bodies
     for (let body = world.getBodyList(); body; body = body.getNext()) {
@@ -275,15 +285,17 @@ function createBodies(geometry, params, world) {
     forkAxis.normalize();
     const forkAngle = Math.atan2(forkAxis.y, forkAxis.x) - Math.PI/2;
     const forkLength = params.frame.bottomForkTubeLength.value + params.frame.topForkTubeLength.value;
-    const forkCenter = Vec2(
-        geometry.headTubeBottom.x - forkAxis.x * forkLength/2,
-        geometry.headTubeBottom.y - forkAxis.y * forkLength/2
+
+    // Position the bottom fork body at the bottom of the top fork tube
+    const bottomForkPos = Vec2(
+        geometry.headTubeTop.x - forkAxis.x * params.frame.topForkTubeLength.value,
+        geometry.headTubeTop.y - forkAxis.y * params.frame.topForkTubeLength.value
     );
 
-    // Create bottom fork tube as a separate dynamic body, centered on itself
+    // Create bottom fork tube as a separate dynamic body
     bodies['bottomFork'] = world.createBody({
         type: 'dynamic',
-        position: forkCenter,
+        position: bottomForkPos,
         angle: forkAngle,
         linearDamping: 0.1,
         angularDamping: 0.1
@@ -291,8 +303,8 @@ function createBodies(geometry, params, world) {
 
     // Create front wheel at the end of the fork
     const frontWheelPos = Vec2(
-        geometry.headTubeBottom.x - forkAxis.x * forkLength,
-        geometry.headTubeBottom.y - forkAxis.y * forkLength
+        bottomForkPos.x - forkAxis.x * params.frame.bottomForkTubeLength.value,
+        bottomForkPos.y - forkAxis.y * params.frame.bottomForkTubeLength.value
     );
     bodies['frontWheel'] = world.createBody({
         type: 'dynamic',
@@ -379,10 +391,48 @@ function updateBodies(params, worldBodies, world) {
         userData: { color: '#333333' }
     });
 
-    const forkTopVertices = geometry.forkTopVertices.map(v => Vec2(
+    // Create shock frame fixture in local coordinates
+    const shockFrameVertices = geometry.shockFrameVertices.map(v => Vec2(
         v.x - geometry.swingArmPivot.x,
         v.y - geometry.swingArmPivot.y
     ));
+    const shockFrameShape = Polygon(shockFrameVertices);
+    frameBody.createFixture(shockFrameShape, {
+        density: params.simulation.density.value,
+        friction: 0.3,
+        restitution: 0.2,
+        filterCategoryBits: CATEGORIES.FRAME,
+        filterMaskBits: MASKS.FRAME,
+        userData: { color: '#666666' } // Slightly lighter color to distinguish it
+    });
+
+    // Calculate fork angle for transformations
+    const forkAxis = Vec2(
+        geometry.headTubeTop.x - geometry.headTubeBottom.x,
+        geometry.headTubeTop.y - geometry.headTubeBottom.y
+    );
+    forkAxis.normalize();
+    const forkAngle = Math.atan2(forkAxis.y, forkAxis.x) - Math.PI/2;
+    const forkLength = params.frame.bottomForkTubeLength.value + params.frame.topForkTubeLength.value;
+
+    // Transform and create top fork tube fixture in frame space
+    const topForkTransform = {
+        x: geometry.headTubeTop.x - geometry.swingArmPivot.x,
+        y: geometry.headTubeTop.y - geometry.swingArmPivot.y,
+        angle: forkAngle
+    };
+
+    const forkTopVertices = geometry.forkTopVertices.map(v => {
+        const rotated = {
+            x: v.x * Math.cos(topForkTransform.angle) - v.y * Math.sin(topForkTransform.angle),
+            y: v.x * Math.sin(topForkTransform.angle) + v.y * Math.cos(topForkTransform.angle)
+        };
+        return Vec2(
+            rotated.x + topForkTransform.x,
+            rotated.y + topForkTransform.y
+        );
+    });
+
     const forkTopShape = Polygon(forkTopVertices);
     frameBody.createFixture(forkTopShape, {
         density: params.simulation.density.value,
@@ -390,28 +440,18 @@ function updateBodies(params, worldBodies, world) {
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FRAME,
         filterMaskBits: MASKS.FRAME,
-        userData: { color: '#333333' }
+        userData: { color: '#4169E1' } // Royal Blue for top fork tube
     });
 
-    // Calculate fork dimensions
-    const forkLength = params.frame.bottomForkTubeLength.value + params.frame.topForkTubeLength.value;
-    const forkWidth = forkLength * 0.1; // Width is 10% of length
-
-    // Create bottom fork fixture centered at origin
-    const forkBottomVertices = [
-        Vec2(-forkWidth/2, -forkLength/2),
-        Vec2(forkWidth/2, -forkLength/2),
-        Vec2(forkWidth/2, forkLength/2),
-        Vec2(-forkWidth/2, forkLength/2)
-    ];
-    const forkBottomShape = Polygon(forkBottomVertices);
+    // Create bottom fork fixture using local space vertices
+    const forkBottomShape = Polygon(geometry.forkBottomVertices.map(v => Vec2(v.x, v.y)));
     bottomForkBody.createFixture(forkBottomShape, {
         density: params.simulation.density.value,
         friction: 0.3,
         restitution: 0.2,
         filterCategoryBits: CATEGORIES.FRAME,
         filterMaskBits: MASKS.FRAME,
-        userData: { color: '#333333' }
+        userData: { color: '#3CB371' } // Medium Sea Green for bottom fork tube
     });
 
     // Create front wheel fixture centered at origin
@@ -462,12 +502,20 @@ function updateBodies(params, worldBodies, world) {
         world.destroyJoint(joint);
     }
 
-    // Calculate fork axis for joints
-    const forkAxis = Vec2(
-        geometry.headTubeTop.x - geometry.headTubeBottom.x,
-        geometry.headTubeTop.y - geometry.headTubeBottom.y
+    // Update bottom fork body position to bottom of top fork tube
+    const bottomForkPos = Vec2(
+        geometry.headTubeTop.x - forkAxis.x * params.frame.topForkTubeLength.value,
+        geometry.headTubeTop.y - forkAxis.y * params.frame.topForkTubeLength.value
     );
-    forkAxis.normalize();
+    bottomForkBody.setPosition(bottomForkPos);
+    bottomForkBody.setAngle(forkAngle);
+
+    // Update front wheel position
+    const frontWheelPos = Vec2(
+        bottomForkPos.x - forkAxis.x * params.frame.bottomForkTubeLength.value,
+        bottomForkPos.y - forkAxis.y * params.frame.bottomForkTubeLength.value
+    );
+    frontWheelBody.setPosition(frontWheelPos);
 
     // Create prismatic joint for fork in local coordinates
     const headTubeBottomLocal = Vec2(

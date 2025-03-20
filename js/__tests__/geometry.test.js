@@ -1,5 +1,5 @@
-import { triangleVertices, triangleCentroid, generateGeometry, triangleVerticesNamed } from '../geometry.js';
-import { distance, transformPoints } from '../geometry.js';
+import { triangleVertices, triangleCentroid, generateGeometry, triangleVerticesNamed, distance, triangleFromVerticesAndEdges } from '../geometry.js';
+import { transformPoints } from '../geometry.js';
 import { scale, rotate, translate, compose } from 'transformation-matrix';
 import { defaultParams } from '../config.js';
 
@@ -98,6 +98,20 @@ describe('geometry.js', () => {
                 expect(geometry).toHaveProperty('headTubeTop');
                 expect(geometry).toHaveProperty('frameCentroid');
                 expect(geometry).toHaveProperty('groundGeometry');
+                expect(geometry).toHaveProperty('rearShockUpperPivot');
+                expect(geometry).toHaveProperty('shockFrameVertices');
+
+                // Verify rear shock upper pivot point distances
+                expect(distance(geometry.rearShockUpperPivot, geometry.headTubeTop))
+                    .toBeCloseTo(defaultParams.frame.rearShockUpperPivotToHeadTubeTop.value);
+                expect(distance(geometry.rearShockUpperPivot, geometry.swingArmPivot))
+                    .toBeCloseTo(defaultParams.frame.rearShockUpperPivotToFramePivot.value);
+
+                // Verify shock frame vertices
+                expect(geometry.shockFrameVertices).toHaveLength(3);
+                expect(geometry.shockFrameVertices[0]).toEqual(geometry.swingArmPivot);
+                expect(geometry.shockFrameVertices[1]).toEqual(geometry.headTubeTop);
+                expect(geometry.shockFrameVertices[2]).toEqual(geometry.rearShockUpperPivot);
             }).not.toThrow();
         });
 
@@ -105,6 +119,53 @@ describe('geometry.js', () => {
             expect(() => {
                 generateGeometry({}, {});
             }).toThrow();
+        });
+    });
+
+    describe('triangleFromVerticesAndEdges', () => {
+        test('should construct valid triangle with clockwise winding', () => {
+            const vertexA = { x: 0, y: 0 };
+            const vertexB = { x: 3, y: 0 };
+            const lengthA = 4;
+            const lengthB = 5;
+            
+            const vertexC = triangleFromVerticesAndEdges(vertexA, vertexB, lengthA, lengthB);
+            
+            // Verify vertex C exists and has x,y coordinates
+            expect(vertexC).toBeDefined();
+            expect(typeof vertexC.x).toBe('number');
+            expect(typeof vertexC.y).toBe('number');
+            
+            // Verify distances match input lengths
+            expect(distance(vertexA, vertexC)).toBeCloseTo(lengthA);
+            expect(distance(vertexB, vertexC)).toBeCloseTo(lengthB);
+            
+            // Verify clockwise winding by checking if vertexC is above x-axis (y < 0)
+            expect(vertexC.y).toBeLessThan(0);
+        });
+
+        test('should reject invalid input parameters', () => {
+            const vertexA = { x: 0, y: 0 };
+            const vertexB = { x: 3, y: 0 };
+            
+            // Test missing vertices
+            expect(() => triangleFromVerticesAndEdges(null, vertexB, 4, 5)).toThrow();
+            expect(() => triangleFromVerticesAndEdges(vertexA, null, 4, 5)).toThrow();
+            
+            // Test invalid lengths
+            expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, -1, 5)).toThrow();
+            expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, 4, 0)).toThrow();
+            expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, 'invalid', 5)).toThrow();
+        });
+
+        test('should reject triangles violating triangle inequality', () => {
+            const vertexA = { x: 0, y: 0 };
+            const vertexB = { x: 3, y: 0 };
+            
+            // Test cases where one side is too long
+            expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, 10, 2)).toThrow();
+            expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, 2, 10)).toThrow();
+            expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, 1, 1)).toThrow(); // Edge C (3) >= A (1) + B (1)
         });
     });
 }); 

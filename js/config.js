@@ -41,6 +41,16 @@ export const defaultParams = {
             displayName: "Rear Wheel Diameter",
             value: 0.5,  // 500mm diameter
             unit: "m"
+        },
+        rearShockUpperPivotToHeadTubeTop: {
+            displayName: "Rear Shock Upper Pivot to Head Tube Top",
+            value: 0.9,  
+            unit: "m"
+        },
+        rearShockUpperPivotToFramePivot: {
+            displayName: "Rear Shock Upper Pivot to Frame Pivot",
+            value: 0.3,  
+            unit: "m"
         }
     },
     simulation: {

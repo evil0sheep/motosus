@@ -79,32 +79,38 @@ export function generateGeometry(frameParams, simulationParams) {
     const headTubeTop = frameVertices[2];
     const frameCentroid = triangleCentroid(frameVertices);
 
-    const forkTopTransform = compose(
-        translate(headTubeBottom.x -swingArmPivot.x, headTubeBottom.y -swingArmPivot.y), 
-        rotate(Math.atan2(headTubeBottom.x - headTubeTop.x, headTubeTop.y - headTubeBottom.y)),
-        translate(0, distance(headTubeBottom, headTubeTop))); 
+    // Calculate rear shock upper pivot point
+    const rearShockUpperPivot = triangleFromVerticesAndEdges(
+        headTubeTop,
+        swingArmPivot,
+        frameParams.rearShockUpperPivotToHeadTubeTop.value,
+        frameParams.rearShockUpperPivotToFramePivot.value
+    );
 
-    const forkWidthMultiplier = 0.2;
-    const forkTopWidth = frameParams.topForkTubeLength.value * forkWidthMultiplier;
-    const forkTopVertices = transformPoints([
-        { x: -forkTopWidth/2, y: -frameParams.topForkTubeLength.value },
-        { x: forkTopWidth/2, y: -frameParams.topForkTubeLength.value },
-        { x: forkTopWidth/2, y: 0 },
-        { x: -forkTopWidth/2, y: 0 }
-    ], forkTopTransform);
+    // Create shock frame vertices in clockwise order
+    const shockFrameVertices = [
+        swingArmPivot,
+        headTubeTop,
+        rearShockUpperPivot
+    ];
 
-
-    const forkBottomTransform = compose(
-        forkTopTransform,
-        translate(0, -frameParams.topForkTubeLength.value)); 
     // Generate bottom fork tube vertices
-    const forkBottomWidth = frameParams.bottomForkTubeLength.value * forkWidthMultiplier;
-    const forkBottomVertices = transformPoints([
+    const forkBottomWidth = frameParams.bottomForkTubeLength.value * 0.2;
+    const forkBottomVertices = [
         { x: -forkBottomWidth/2, y: -frameParams.bottomForkTubeLength.value },
         { x: forkBottomWidth/2, y: -frameParams.bottomForkTubeLength.value },
         { x: forkBottomWidth/2, y: 0 },
         { x: -forkBottomWidth/2, y: 0 }
-    ], forkBottomTransform);
+    ];
+
+    // Generate top fork tube vertices in frame space
+    const forkTopWidth = frameParams.topForkTubeLength.value * 0.2;
+    const forkTopVertices = [
+        { x: -forkTopWidth/2, y: -frameParams.topForkTubeLength.value },
+        { x: forkTopWidth/2, y: -frameParams.topForkTubeLength.value },
+        { x: forkTopWidth/2, y: 0 },
+        { x: -forkTopWidth/2, y: 0 }
+    ];
 
     // Create ground geometry using simulation parameters
     const groundGeometry = {
@@ -122,6 +128,42 @@ export function generateGeometry(frameParams, simulationParams) {
         headTubeBottom,
         headTubeTop,
         frameCentroid,
-        groundGeometry
+        groundGeometry,
+        rearShockUpperPivot,
+        shockFrameVertices
     };
+}
+
+export function triangleFromVerticesAndEdges(vertexA, vertexB, lengthA, lengthB) {
+    // Validate input parameters
+    if (!vertexA || !vertexB || typeof lengthA !== 'number' || typeof lengthB !== 'number') {
+        throw new Error('Invalid input: vertexA and vertexB must be points with x,y coordinates, lengthA and lengthB must be numbers');
+    }
+    if (lengthA <= 0 || lengthB <= 0) {
+        throw new Error('Invalid input: edge lengths must be positive');
+    }
+
+    // Calculate the length of edge C (between vertices A and B)
+    const lengthC = distance(vertexA, vertexB);
+
+    // Validate triangle inequality theorem
+    if (lengthA >= lengthB + lengthC || lengthB >= lengthA + lengthC || lengthC >= lengthA + lengthB) {
+        throw new Error('Invalid triangle: each side must be less than the sum of the other two sides');
+    }
+
+    // Use law of cosines to find angle at vertex A
+    const cosA = (lengthB * lengthB - lengthA * lengthA - lengthC * lengthC) / (-2 * lengthA * lengthC);
+    const angleA = Math.acos(cosA);
+
+    // Calculate the angle of edge C relative to x-axis
+    const edgeAngle = Math.atan2(vertexB.y - vertexA.y, vertexB.x - vertexA.x);
+
+    // Calculate vertex C coordinates for clockwise winding
+    // We subtract angleA from edgeAngle because we want clockwise winding
+    const vertexC = {
+        x: vertexA.x + lengthA * Math.cos(edgeAngle - angleA),
+        y: vertexA.y + lengthA * Math.sin(edgeAngle - angleA)
+    };
+
+    return vertexC;
 } 
