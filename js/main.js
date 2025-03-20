@@ -65,6 +65,15 @@ window.addEventListener('load', () => {
         setRunning(e.target.checked);
     });
 
+    // Add space bar handler to toggle simulation
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !e.repeat) {
+            e.preventDefault(); // Prevent page scrolling
+            simulationCheckbox.checked = !simulationCheckbox.checked;
+            setRunning(simulationCheckbox.checked);
+        }
+    });
+
     // Add build timestamp to UI
     const timestampDiv = document.createElement('div');
     timestampDiv.style.position = 'fixed';
