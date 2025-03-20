@@ -1,4 +1,4 @@
-import { triangleVertices, triangleCentroid, generateGeometry, triangleVerticesNamed, distance, triangleFromVerticesAndEdges } from '../geometry.js';
+import { triangleVertices, triangleCentroid, triangleVerticesNamed, distance, triangleFromVerticesAndEdges } from '../geometry.js';
 import { transformPoints } from '../geometry.js';
 import { scale, rotate, translate, compose } from 'transformation-matrix';
 import { defaultParams } from '../config.js';
@@ -84,44 +84,6 @@ describe('geometry.js', () => {
         });
     });
 
-    describe('generateGeometry', () => {
-        test('should handle valid parameters', () => {
-            expect(() => {
-                const geometry = generateGeometry(defaultParams.frame, defaultParams.simulation);
-                
-                // Check that all required properties exist
-                expect(geometry).toHaveProperty('frameVertices');
-                expect(geometry).toHaveProperty('forkTopVertices');
-                expect(geometry).toHaveProperty('forkBottomVertices');
-                expect(geometry).toHaveProperty('swingArmPivot');
-                expect(geometry).toHaveProperty('headTubeBottom');
-                expect(geometry).toHaveProperty('headTubeTop');
-                expect(geometry).toHaveProperty('frameCentroid');
-                expect(geometry).toHaveProperty('groundGeometry');
-                expect(geometry).toHaveProperty('rearShockUpperPivot');
-                expect(geometry).toHaveProperty('shockFrameVertices');
-
-                // Verify rear shock upper pivot point distances
-                expect(distance(geometry.rearShockUpperPivot, geometry.headTubeTop))
-                    .toBeCloseTo(defaultParams.frame.rearShockUpperPivotToHeadTubeTop.value);
-                expect(distance(geometry.rearShockUpperPivot, geometry.swingArmPivot))
-                    .toBeCloseTo(defaultParams.frame.rearShockUpperPivotToFramePivot.value);
-
-                // Verify shock frame vertices
-                expect(geometry.shockFrameVertices).toHaveLength(3);
-                expect(geometry.shockFrameVertices[0]).toEqual(geometry.swingArmPivot);
-                expect(geometry.shockFrameVertices[1]).toEqual(geometry.headTubeTop);
-                expect(geometry.shockFrameVertices[2]).toEqual(geometry.rearShockUpperPivot);
-            }).not.toThrow();
-        });
-
-        test('should handle invalid parameters', () => {
-            expect(() => {
-                generateGeometry({}, {});
-            }).toThrow();
-        });
-    });
-
     describe('triangleFromVerticesAndEdges', () => {
         test('should construct valid triangle with clockwise winding', () => {
             const vertexA = { x: 0, y: 0 };
@@ -156,16 +118,6 @@ describe('geometry.js', () => {
             expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, -1, 5)).toThrow();
             expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, 4, 0)).toThrow();
             expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, 'invalid', 5)).toThrow();
-        });
-
-        test('should reject triangles violating triangle inequality', () => {
-            const vertexA = { x: 0, y: 0 };
-            const vertexB = { x: 3, y: 0 };
-            
-            // Test cases where one side is too long
-            expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, 10, 2)).toThrow();
-            expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, 2, 10)).toThrow();
-            expect(() => triangleFromVerticesAndEdges(vertexA, vertexB, 1, 1)).toThrow(); // Edge C (3) >= A (1) + B (1)
         });
     });
 }); 

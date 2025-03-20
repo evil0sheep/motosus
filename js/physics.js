@@ -1,5 +1,5 @@
 import { World, Vec2, Box, Polygon, Circle, PrismaticJoint, DistanceJoint, MouseJoint, RevoluteJoint } from 'planck';
-import { generateGeometry } from './geometry.js';
+import { triangleVerticesNamed, triangleCentroid, triangleFromVerticesAndEdges } from './geometry.js';
 import { applyToPoint } from 'transformation-matrix';
 
 // Utility function to transform a Planck.js Vec2 using a transformation matrix
@@ -259,92 +259,54 @@ function draw(ctx, world, viewportScale, viewportTranslateX, viewportTranslateY)
     ctx.restore(); // Restore the main context
 }
 
-// Function to create all bodies for the simulation
-function createBodies(geometry, params, world) {
-    const bodies = {};
-
-    // Create ground
-    bodies['ground'] = world.createBody({
-        type: 'static',
-        position: Vec2(0, 1)
-    });
-
-    // Create frame as a rigid body at swingarm pivot
-    bodies['frame'] = world.createBody({
-        type: 'dynamic',
-        position: Vec2(geometry.swingArmPivot.x, geometry.swingArmPivot.y),
-        linearDamping: 0.1,
-        angularDamping: 0.1
-    });
-
-    // Calculate fork angle and position
-    const forkAxis = Vec2(
-        geometry.headTubeTop.x - geometry.headTubeBottom.x,
-        geometry.headTubeTop.y - geometry.headTubeBottom.y
-    );
-    forkAxis.normalize();
-    const forkAngle = Math.atan2(forkAxis.y, forkAxis.x) - Math.PI/2;
-    const forkLength = params.frame.bottomForkTubeLength.value + params.frame.topForkTubeLength.value;
-
-    // Position the bottom fork body at the bottom of the top fork tube
-    const bottomForkPos = Vec2(
-        geometry.headTubeTop.x - forkAxis.x * params.frame.topForkTubeLength.value,
-        geometry.headTubeTop.y - forkAxis.y * params.frame.topForkTubeLength.value
-    );
-
-    // Create bottom fork tube as a separate dynamic body
-    bodies['bottomFork'] = world.createBody({
-        type: 'dynamic',
-        position: bottomForkPos,
-        angle: forkAngle,
-        linearDamping: 0.1,
-        angularDamping: 0.1
-    });
-
-    // Create front wheel at the end of the fork
-    const frontWheelPos = Vec2(
-        bottomForkPos.x - forkAxis.x * params.frame.bottomForkTubeLength.value,
-        bottomForkPos.y - forkAxis.y * params.frame.bottomForkTubeLength.value
-    );
-    bodies['frontWheel'] = world.createBody({
-        type: 'dynamic',
-        position: frontWheelPos,
-        linearDamping: 0.1,
-        angularDamping: 0.1
-    });
-
-    // Create swingarm as a dynamic body, with origin at pivot point
-    bodies['swingarm'] = world.createBody({
-        type: 'dynamic',
-        position: Vec2(0, 0),
-        linearDamping: 0.1,
-        angularDamping: 0.1,
-        angle: 0  // Initialize horizontal
-    });
-
-    // Create rear wheel at end of swingarm
-    const rearWheelPos = Vec2(
-        params.frame.swingarmLength.value,
-       0
-    );
-    bodies['rearWheel'] = world.createBody({
-        type: 'dynamic',
-        position: rearWheelPos,
-        linearDamping: 0.1,
-        angularDamping: 0.1
-    });
-
-    // Update fixtures and joints
-    updateBodies(params, bodies, world);
-
-    return bodies;
-}
-
 // Function to update motorcycle geometry without recreating bodies
 function updateBodies(params, worldBodies, world) {
     if (!worldBodies.frame) return;
 
-    const geometry = generateGeometry(params.frame, params.simulation);
+    // Generate frame geometry
+    const frameVertices = triangleVerticesNamed(
+        params.frame.headTubeLength,
+        params.frame.swingArmPivotToHeadTubeTopCenter,
+        params.frame.swingArmPivotToHeadTubeBottomCenter
+    );
+    const swingArmPivot = frameVertices[0];
+    const headTubeBottom = frameVertices[1];
+    const headTubeTop = frameVertices[2];
+    const frameCentroid = triangleCentroid(frameVertices);
+
+    // Calculate rear shock upper pivot point
+    const rearShockUpperPivot = triangleFromVerticesAndEdges(
+        headTubeTop,
+        swingArmPivot,
+        params.frame.rearShockUpperPivotToHeadTubeTop.value,
+        params.frame.rearShockUpperPivotToFramePivot.value
+    );
+
+    // Create shock frame vertices in clockwise order
+    const shockFrameVertices = [
+        swingArmPivot,
+        headTubeTop,
+        rearShockUpperPivot
+    ];
+
+    // Generate bottom fork tube vertices
+    const forkBottomWidth = params.frame.bottomForkTubeLength.value * 0.2;
+    const forkBottomVertices = [
+        { x: -forkBottomWidth/2, y: -params.frame.bottomForkTubeLength.value },
+        { x: forkBottomWidth/2, y: -params.frame.bottomForkTubeLength.value },
+        { x: forkBottomWidth/2, y: 0 },
+        { x: -forkBottomWidth/2, y: 0 }
+    ];
+
+    // Generate top fork tube vertices in frame space
+    const forkTopWidth = params.frame.topForkTubeLength.value * 0.2;
+    const forkTopVertices = [
+        { x: -forkTopWidth/2, y: -params.frame.topForkTubeLength.value },
+        { x: forkTopWidth/2, y: -params.frame.topForkTubeLength.value },
+        { x: forkTopWidth/2, y: 0 },
+        { x: -forkTopWidth/2, y: 0 }
+    ];
+
     const frameBody = worldBodies.frame;
     const bottomForkBody = worldBodies.bottomFork;
     const frontWheelBody = worldBodies.frontWheel;
@@ -377,11 +339,11 @@ function updateBodies(params, worldBodies, world) {
     });
 
     // Create frame fixtures in local coordinates (relative to swingarm pivot)
-    const frameVertices = geometry.frameVertices.map(v => Vec2(
-        v.x - geometry.swingArmPivot.x,
-        v.y - geometry.swingArmPivot.y
+    const frameVerticesLocal = frameVertices.map(v => Vec2(
+        v.x - swingArmPivot.x,
+        v.y - swingArmPivot.y
     ));
-    const frameShape = Polygon(frameVertices);
+    const frameShape = Polygon(frameVerticesLocal);
     frameBody.createFixture(frameShape, {
         density: params.simulation.density.value,
         friction: 0.3,
@@ -392,11 +354,11 @@ function updateBodies(params, worldBodies, world) {
     });
 
     // Create shock frame fixture in local coordinates
-    const shockFrameVertices = geometry.shockFrameVertices.map(v => Vec2(
-        v.x - geometry.swingArmPivot.x,
-        v.y - geometry.swingArmPivot.y
+    const shockFrameVerticesLocal = shockFrameVertices.map(v => Vec2(
+        v.x - swingArmPivot.x,
+        v.y - swingArmPivot.y
     ));
-    const shockFrameShape = Polygon(shockFrameVertices);
+    const shockFrameShape = Polygon(shockFrameVerticesLocal);
     frameBody.createFixture(shockFrameShape, {
         density: params.simulation.density.value,
         friction: 0.3,
@@ -408,8 +370,8 @@ function updateBodies(params, worldBodies, world) {
 
     // Calculate fork angle for transformations
     const forkAxis = Vec2(
-        geometry.headTubeTop.x - geometry.headTubeBottom.x,
-        geometry.headTubeTop.y - geometry.headTubeBottom.y
+        headTubeTop.x - headTubeBottom.x,
+        headTubeTop.y - headTubeBottom.y
     );
     forkAxis.normalize();
     const forkAngle = Math.atan2(forkAxis.y, forkAxis.x) - Math.PI/2;
@@ -417,12 +379,12 @@ function updateBodies(params, worldBodies, world) {
 
     // Transform and create top fork tube fixture in frame space
     const topForkTransform = {
-        x: geometry.headTubeTop.x - geometry.swingArmPivot.x,
-        y: geometry.headTubeTop.y - geometry.swingArmPivot.y,
+        x: headTubeTop.x - swingArmPivot.x,
+        y: headTubeTop.y - swingArmPivot.y,
         angle: forkAngle
     };
 
-    const forkTopVertices = geometry.forkTopVertices.map(v => {
+    const forkTopVerticesTransformed = forkTopVertices.map(v => {
         const rotated = {
             x: v.x * Math.cos(topForkTransform.angle) - v.y * Math.sin(topForkTransform.angle),
             y: v.x * Math.sin(topForkTransform.angle) + v.y * Math.cos(topForkTransform.angle)
@@ -433,7 +395,7 @@ function updateBodies(params, worldBodies, world) {
         );
     });
 
-    const forkTopShape = Polygon(forkTopVertices);
+    const forkTopShape = Polygon(forkTopVerticesTransformed);
     frameBody.createFixture(forkTopShape, {
         density: params.simulation.density.value,
         friction: 0.3,
@@ -444,7 +406,7 @@ function updateBodies(params, worldBodies, world) {
     });
 
     // Create bottom fork fixture using local space vertices
-    const forkBottomShape = Polygon(geometry.forkBottomVertices.map(v => Vec2(v.x, v.y)));
+    const forkBottomShape = Polygon(forkBottomVertices.map(v => Vec2(v.x, v.y)));
     bottomForkBody.createFixture(forkBottomShape, {
         density: params.simulation.density.value,
         friction: 0.3,
@@ -504,8 +466,8 @@ function updateBodies(params, worldBodies, world) {
 
     // Update bottom fork body position to bottom of top fork tube
     const bottomForkPos = Vec2(
-        geometry.headTubeTop.x - forkAxis.x * params.frame.topForkTubeLength.value,
-        geometry.headTubeTop.y - forkAxis.y * params.frame.topForkTubeLength.value
+        headTubeTop.x - forkAxis.x * params.frame.topForkTubeLength.value,
+        headTubeTop.y - forkAxis.y * params.frame.topForkTubeLength.value
     );
     bottomForkBody.setPosition(bottomForkPos);
     bottomForkBody.setAngle(forkAngle);
@@ -525,8 +487,8 @@ function updateBodies(params, worldBodies, world) {
         enableMotor: false,
         localAxisA: forkAxis,
         localAnchorA: Vec2(
-            geometry.headTubeTop.x - forkAxis.x * params.frame.topForkTubeLength.value - geometry.swingArmPivot.x,
-            geometry.headTubeTop.y - forkAxis.y * params.frame.topForkTubeLength.value - geometry.swingArmPivot.y
+            headTubeTop.x - forkAxis.x * params.frame.topForkTubeLength.value - swingArmPivot.x,
+            headTubeTop.y - forkAxis.y * params.frame.topForkTubeLength.value - swingArmPivot.y
         ),
         localAnchorB: Vec2(0, 0) // At the top of bottom fork tube
     }, frameBody, bottomForkBody);
@@ -543,8 +505,8 @@ function updateBodies(params, worldBodies, world) {
         dampingRatio: params.simulation.forkSpringDamping.value,
         length: springRestLength,
         localAnchorA: Vec2(
-            geometry.headTubeBottom.x - geometry.swingArmPivot.x,
-            geometry.headTubeBottom.y - geometry.swingArmPivot.y
+            headTubeBottom.x - swingArmPivot.x,
+            headTubeBottom.y - swingArmPivot.y
         ),
         localAnchorB: Vec2(0, -params.frame.bottomForkTubeLength.value) // Bottom of bottom fork tube
     }, frameBody, bottomForkBody);
@@ -597,12 +559,61 @@ function createWorld(params, world, render, worldBodies) {
         delete worldBodies[key];
     });
 
-    // Generate geometry from params
-    const geometry = generateGeometry(params.frame, params.simulation);
-    const newBodies = createBodies(geometry, params, world);
-    
-    // Copy all properties from newBodies to worldBodies
-    Object.assign(worldBodies, newBodies);
+    // Create bodies
+    const bodies = {};
+
+    // Create ground
+    bodies['ground'] = world.createBody({
+        type: 'static',
+        position: Vec2(0, 1)
+    });
+
+    // Create frame as a rigid body at swingarm pivot
+    bodies['frame'] = world.createBody({
+        type: 'dynamic',
+        position: Vec2(0, 0),
+        linearDamping: 0.1,
+        angularDamping: 0.1
+    });
+
+    // Create bottom fork tube as a separate dynamic body
+    bodies['bottomFork'] = world.createBody({
+        type: 'dynamic',
+        position: Vec2(0, 0),
+        linearDamping: 0.1,
+        angularDamping: 0.1
+    });
+
+    // Create front wheel
+    bodies['frontWheel'] = world.createBody({
+        type: 'dynamic',
+        position: Vec2(0, 0),
+        linearDamping: 0.1,
+        angularDamping: 0.1
+    });
+
+    // Create swingarm as a dynamic body, with origin at pivot point
+    bodies['swingarm'] = world.createBody({
+        type: 'dynamic',
+        position: Vec2(0, 0),
+        linearDamping: 0.1,
+        angularDamping: 0.1,
+        angle: 0  // Initialize horizontal
+    });
+
+    // Create rear wheel at end of swingarm
+    bodies['rearWheel'] = world.createBody({
+        type: 'dynamic',
+        position: Vec2(params.frame.swingarmLength.value, 0),
+        linearDamping: 0.1,
+        angularDamping: 0.1
+    });
+
+    // Copy all properties from bodies to worldBodies
+    Object.assign(worldBodies, bodies);
+
+    // Update fixtures and joints
+    updateBodies(params, worldBodies, world);
 }
 
 export { initPhysics, createWorld, updateBodies, CATEGORIES, MASKS, transformVec2 }; 
