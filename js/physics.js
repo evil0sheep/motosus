@@ -51,7 +51,7 @@ function initPhysics(canvasContainer, canvasSize) {
     function getWorldPoint(e) {
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left - canvas.width / 2) / 400;
-        const y = (e.clientY - rect.top - canvas.height) / 400;
+        const y = (e.clientY - rect.top - canvas.height / 2) / 400; // Fixed: center y-coordinate
         return Vec2(x, y);
     }
 
@@ -64,8 +64,8 @@ function initPhysics(canvasContainer, canvasSize) {
         // Query the world for bodies at the click position using AABB
         let clickedBody = null;
         const aabb = {
-            lowerBound: Vec2(worldPoint.x - 0.01, worldPoint.y - 0.01),
-            upperBound: Vec2(worldPoint.x + 0.01, worldPoint.y + 0.01)
+            lowerBound: Vec2(worldPoint.x - 0.05, worldPoint.y - 0.05), // Increased click radius
+            upperBound: Vec2(worldPoint.x + 0.05, worldPoint.y + 0.05)
         };
 
         world.queryAABB(aabb, (fixture) => {
@@ -79,9 +79,9 @@ function initPhysics(canvasContainer, canvasSize) {
 
         if (clickedBody) {
             mouseJoint = world.createJoint(MouseJoint({
-                maxForce: 1000.0 * clickedBody.getMass(),
-                frequencyHz: 5.0,
-                dampingRatio: 0.7,
+                maxForce: 2000.0 * clickedBody.getMass(), // Increased force
+                frequencyHz: 2.0, // Lower frequency for smoother movement
+                dampingRatio: 0.5, // Lower damping for smoother movement
                 target: worldPoint,
             }, mouseBody, clickedBody, worldPoint));
         }
