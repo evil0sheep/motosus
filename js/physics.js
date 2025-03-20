@@ -518,34 +518,35 @@ function updateBodies(params, worldBodies, world) {
     frontWheelBody.setPosition(frontWheelPos);
 
     // Create prismatic joint for fork in local coordinates
-    const headTubeBottomLocal = Vec2(
-        geometry.headTubeBottom.x - geometry.swingArmPivot.x,
-        geometry.headTubeBottom.y - geometry.swingArmPivot.y
-    );
-    
     const prismaticJoint = PrismaticJoint({
         enableLimit: true,
         lowerTranslation: 0,
         upperTranslation: 0.15,
         enableMotor: false,
         localAxisA: forkAxis,
-        localAnchorA: headTubeBottomLocal,
-        localAnchorB: Vec2(0, forkLength/2) // Top of fork tube
+        localAnchorA: Vec2(
+            geometry.headTubeTop.x - forkAxis.x * params.frame.topForkTubeLength.value - geometry.swingArmPivot.x,
+            geometry.headTubeTop.y - forkAxis.y * params.frame.topForkTubeLength.value - geometry.swingArmPivot.y
+        ),
+        localAnchorB: Vec2(0, 0) // At the top of bottom fork tube
     }, frameBody, bottomForkBody);
     
     world.createJoint(prismaticJoint);
 
     // Create fork spring (distance joint)
-    const springRestLength = params.frame.topForkTubeLength.value + 
-                           params.frame.bottomForkTubeLength.value - 
-                           params.frame.headTubeLength.value;
+    const springRestLength = params.frame.bottomForkTubeLength.value
+     + params.frame.topForkTubeLength.value 
+     - params.frame.headTubeLength.value;
     
     const distanceJoint = DistanceJoint({
         frequencyHz: params.simulation.forkSpringFrequency.value,
         dampingRatio: params.simulation.forkSpringDamping.value,
         length: springRestLength,
-        localAnchorA: headTubeBottomLocal,
-        localAnchorB: Vec2(0, -forkLength/2) // Bottom of fork tube
+        localAnchorA: Vec2(
+            geometry.headTubeBottom.x - geometry.swingArmPivot.x,
+            geometry.headTubeBottom.y - geometry.swingArmPivot.y
+        ),
+        localAnchorB: Vec2(0, -params.frame.bottomForkTubeLength.value) // Bottom of bottom fork tube
     }, frameBody, bottomForkBody);
     
     world.createJoint(distanceJoint);
@@ -555,7 +556,7 @@ function updateBodies(params, worldBodies, world) {
         enableMotor: false,
         maxMotorTorque: 0,
         motorSpeed: 0,
-        localAnchorA: Vec2(0, -forkLength/2), // Bottom of fork
+        localAnchorA: Vec2(0, -params.frame.bottomForkTubeLength.value), // Bottom of bottom fork tube
         localAnchorB: Vec2(0, 0) // Center of wheel
     }, bottomForkBody, frontWheelBody);
 
