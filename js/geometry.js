@@ -5,6 +5,12 @@ export function distance(p1, p2) {
     return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 }
 
+// Utility function to transform a Planck.js Vec2 using a transformation matrix
+export function transformVec2(vec2, matrix) {
+    const point = applyToPoint(matrix, { x: vec2.x, y: vec2.y });
+    return Vec2(point.x, point.y);
+}
+
 export function transformPoints(points, matrix) {
     return points.map(p => {
         const transformed = applyToPoint(matrix, { x: p.x, y: p.y });

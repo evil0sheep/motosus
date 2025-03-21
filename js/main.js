@@ -1,9 +1,8 @@
 //Dont add the Matter.js module aliases here because we are referencing them through the Matter object for consistency across files
 
-// Import physics functions and configuration
-import { initPhysics, createWorld, updateBodies } from './physics.js';
+// Import simulation and configuration
+import { Simulation } from './Simulation.js';
 import { defaultParams } from './config.js';
-
 
 // Constants
 const CANVAS_MARGIN = 50; // Margin from edges
@@ -12,16 +11,13 @@ const canvasSize = {
     height: window.innerHeight
 };
 
-// Initialize simulation state
-let worldBodies = {};
-
 // Initialize when DOM is loaded
 window.addEventListener('load', () => {
     // Get controls container
     const controls = document.getElementById('controls');
 
-    // Initialize physics engine and get Planck.js objects
-    const { world, canvas, ctx, setRunning } = initPhysics(document.getElementById('canvas-container'), canvasSize);
+    // Initialize simulation
+    const simulation = new Simulation(document.getElementById('canvas-container'), canvasSize);
 
     // Create control buttons container
     const controlButtonsContainer = document.createElement('div');
@@ -62,7 +58,7 @@ window.addEventListener('load', () => {
 
     // Handle simulation toggle
     simulationCheckbox.addEventListener('change', (e) => {
-        setRunning(e.target.checked);
+        simulation.setRunning(e.target.checked);
     });
 
     // Add space bar handler to toggle simulation
@@ -70,7 +66,7 @@ window.addEventListener('load', () => {
         if (e.code === 'Space' && !e.repeat) {
             e.preventDefault(); // Prevent page scrolling
             simulationCheckbox.checked = !simulationCheckbox.checked;
-            setRunning(simulationCheckbox.checked);
+            simulation.setRunning(simulationCheckbox.checked);
         }
     });
 
@@ -101,7 +97,7 @@ window.addEventListener('load', () => {
     };
 
     // Initialize the world with default values
-    createWorld(getDefaultParams(), world, { canvas, ctx }, worldBodies);
+    simulation.createWorld(getDefaultParams());
 
     // Create gravity toggle
     const gravityContainer = document.createElement('div');
@@ -128,7 +124,7 @@ window.addEventListener('load', () => {
     // Handle gravity toggle
     gravityCheckbox.addEventListener('change', (e) => {
         const gravity = e.target.checked ? 9.81 : 0;
-        world.setGravity({ x: 0, y: gravity });
+        simulation.world.setGravity({ x: 0, y: gravity });
     });
 
     // Create UI controls
@@ -206,7 +202,7 @@ window.addEventListener('load', () => {
             
             const currentParams = getCurrentParams();
             try {
-                updateBodies(currentParams, worldBodies, world);
+                simulation.updateBodies(currentParams);
             } catch (error) {
                 // Revert the slider to its previous value
                 e.target.value = e.target.defaultValue;
@@ -239,7 +235,7 @@ window.addEventListener('load', () => {
                 
                 const currentParams = getCurrentParams();
                 try {
-                    updateBodies(currentParams, worldBodies, world);
+                    simulation.updateBodies(currentParams);
                 } catch (error) {
                     // Revert all values on error
                     slider.value = slider.defaultValue;
@@ -250,19 +246,18 @@ window.addEventListener('load', () => {
         });
     });
 
-    // Handle reset button click
-    document.getElementById('resetButton').addEventListener('click', () => {
-        const currentParams = getDefaultParams();
-        
-        try {
-            createWorld(
-                currentParams,
-                world,
-                { canvas, ctx },
-                worldBodies
-            );
-        } catch (error) {
-            alert(error.message);
-        }
+    // Handle reset button
+    resetButton.addEventListener('click', () => {
+        // Reset all sliders to default values
+        Object.entries(defaultParams.frame).forEach(([key, config]) => {
+            const value_mm = config.value * 1000;
+            const slider = document.getElementById(key);
+            const textInput = document.getElementById(`${key}Text`);
+            slider.value = value_mm;
+            textInput.value = value_mm;
+        });
+
+        // Reset simulation
+        simulation.createWorld(getDefaultParams());
     });
 }); 

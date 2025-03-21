@@ -1,4 +1,4 @@
-import { initPhysics, createWorld, updateBodies, transformVec2 } from '../physics.js';
+import { Simulation, CATEGORIES, transformVec2 } from '../Simulation.js';
 import { defaultParams } from '../config.js';
 import { createCanvas } from 'canvas';
 import { translate, rotate, compose } from 'transformation-matrix';
@@ -45,7 +45,7 @@ global.document = {
     createElement: (type) => new MockElement(type)
 };
 
-describe('physics.js', () => {
+describe('Simulation', () => {
     describe('transformVec2', () => {
         test('should correctly transform a Vec2', () => {
             const vec = Vec2(1, 0);
@@ -62,7 +62,7 @@ describe('physics.js', () => {
         });
     });
 
-    describe('initPhysics', () => {
+    describe('constructor', () => {
         let canvasContainer;
         let canvasSize;
 
@@ -77,66 +77,64 @@ describe('physics.js', () => {
         });
 
         test('should initialize without errors', () => {
-            const { world, canvas, ctx } = initPhysics(canvasContainer, canvasSize);
-            expect(world).toBeDefined();
-            expect(canvas).toBeDefined();
-            expect(ctx).toBeDefined();
+            const simulation = new Simulation(canvasContainer, canvasSize);
+            expect(simulation.world).toBeDefined();
+            expect(simulation.canvas).toBeDefined();
+            expect(simulation.ctx).toBeDefined();
         });
 
         test('should error with invalid input', () => {
             expect(() => {
-                initPhysics(null, null);
+                new Simulation(null, null);
             }).toThrow();
         });
     });
 
     describe('createWorld', () => {
-        let world;
-        let worldBodies;
+        let simulation;
         let canvasContainer;
         let canvasSize;
 
         beforeEach(() => {
-            world = World({
-                gravity: Vec2(0, 9.81)
-            });
-            worldBodies = {};
+            canvasContainer = new MockElement('div');
+            canvasSize = { width: 800, height: 600 };
+            simulation = new Simulation(canvasContainer, canvasSize);
         });
 
         test('should create world without errors', () => {
-            createWorld(cloneParams(), world, null, worldBodies);
-            expect(worldBodies.ground).toBeDefined();
-            expect(worldBodies.frame).toBeDefined();
+            simulation.createWorld(cloneParams());
+            expect(simulation.worldBodies.ground).toBeDefined();
+            expect(simulation.worldBodies.frame).toBeDefined();
         });
 
         test('should handle invalid parameters', () => {
             expect(() => {
-                createWorld({}, world, null, worldBodies);
+                simulation.createWorld({});
             }).toThrow();
         });
     });
 
     describe('updateBodies', () => {
-        let world;
-        let worldBodies;
+        let simulation;
+        let canvasContainer;
+        let canvasSize;
 
         beforeEach(() => {
-            world = World({
-                gravity: Vec2(0, 9.81)
-            });
-            worldBodies = {};
-            createWorld(cloneParams(), world, null, worldBodies);
+            canvasContainer = new MockElement('div');
+            canvasSize = { width: 800, height: 600 };
+            simulation = new Simulation(canvasContainer, canvasSize);
+            simulation.createWorld(cloneParams());
         });
 
         test('should update bodies without errors', () => {
             const newParams = cloneParams();
-            updateBodies(newParams, worldBodies, world);
-            expect(worldBodies.frame).toBeDefined();
-            expect(worldBodies.bottomFork).toBeDefined();
+            simulation.updateBodies(newParams);
+            expect(simulation.worldBodies.frame).toBeDefined();
+            expect(simulation.worldBodies.bottomFork).toBeDefined();
         });
 
         test('should handle invalid parameters', () => {
-            updateBodies({}, {}, world); // Should not throw
+            simulation.updateBodies({}); // Should not throw
         });
     });
 }); 
