@@ -122,8 +122,46 @@ class SimulationComponent {
      * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
      */
     drawImpl(ctx) {
-        // Default implementation does nothing
-        // Derived classes should override this
+        // Draw all fixtures
+        for (let fixture = this.body.getFixtureList(); fixture; fixture = fixture.getNext()) {
+            const shape = fixture.getShape();
+            const userData = fixture.getUserData() || { color: '#4CAF50' };
+            
+            ctx.beginPath();
+            if (shape.getType() === 'circle') {
+                // Draw wheel rim
+                ctx.arc(0, 0, shape.getRadius(), 0, 2 * Math.PI);
+                ctx.strokeStyle = userData.color;
+                ctx.lineWidth = 0.005;
+                ctx.stroke();
+                
+                // Draw spokes
+                const numSpokes = 8;
+                const radius = shape.getRadius();
+                ctx.beginPath();
+                for (let i = 0; i < numSpokes; i++) {
+                    const angle = (i * 2 * Math.PI) / numSpokes;
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(
+                        radius * Math.cos(angle),
+                        radius * Math.sin(angle)
+                    );
+                }
+                ctx.strokeStyle = '#666666';
+                ctx.lineWidth = 0.003;
+                ctx.stroke();
+            } else if (shape.getType() === 'polygon') {
+                const vertices = shape.m_vertices;
+                ctx.moveTo(vertices[0].x, vertices[0].y);
+                for (let i = 1; i < vertices.length; i++) {
+                    ctx.lineTo(vertices[i].x, vertices[i].y);
+                }
+                ctx.closePath();
+                ctx.strokeStyle = userData.color;
+                ctx.lineWidth = 0.005;
+                ctx.stroke();
+            }
+        }
     }
 
     /**
